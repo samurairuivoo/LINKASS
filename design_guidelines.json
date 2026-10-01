@@ -1,0 +1,104 @@
+{
+  "project_title": "Vortex - Modern Real-Time Community & Chat Platform",
+  "archetype": "THE PERFORMANCE PRO x SWISS ANTI-AI BRUTALISM",
+  "target_context": "Discord Competitor / Hybrid SaaS Chat Platform",
+  "theme": "Dark Modern Tactical with Cream & Deep Forest Base and Coral Electric Sparks",
+  "brand_colors": {
+    "cream_background_light": "#f7f3ed",
+    "dark_green_primary": "#14231e",
+    "coral_accent": "#e78662",
+    "dark_canvas_bg": "#0c1411",
+    "dark_surface_card": "#121e1a",
+    "dark_surface_hover": "#1a2a25",
+    "emerald_online": "#22c55e",
+    "amber_idle": "#f59e0b",
+    "rose_busy": "#f43f5e",
+    "muted_border": "rgba(231, 134, 98, 0.15)",
+    "text_primary_dark": "#f7f3ed",
+    "text_secondary_dark": "#a3b8b0",
+    "text_dark_green": "#14231e"
+  },
+  "typography": {
+    "heading_font": "Space Grotesk, sans-serif",
+    "body_font": "DM Sans, sans-serif",
+    "mono_font": "JetBrains Mono, monospace",
+    "sizes": {
+      "hero_heading": "text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight",
+      "section_heading": "text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight",
+      "subsection_heading": "text-xl sm:text-2xl font-medium",
+      "card_heading": "text-lg font-semibold",
+      "body": "text-sm sm:text-base leading-relaxed",
+      "caption": "text-xs tracking-wider uppercase"
+    },
+    "note": "Use Space Grotesk for Headings, Brand Headers, Server Names, and Callouts. Use DM Sans for Chat Messages, Inputs, Channel List, and Body Text. All code snippets or system stats must use JetBrains Mono. Note: .js files are used throughout the frontend codebase."
+  },
+  "visual_enhancers": {
+    "glassmorphism": "backdrop-blur-xl bg-[#121e1a]/80 border border-[#e78662]/20 shadow-[0_8px_32px_rgba(0,0,0,0.37)]",
+    "tracing_beam": "relative before:absolute before:inset-0 before:rounded-xl before:p-[1px] before:bg-gradient-to-r before:from-[#e78662] before:via-[#22c55e] before:to-transparent",
+    "ambient_glow": "shadow-[0_0_25px_rgba(231,134,98,0.18)]",
+    "noise_overlay": "pointer-events-none opacity-25 mix-blend-overlay bg-[url('https://transparenttextures.com/patterns/stardust.png')]",
+    "tactile_borders": "border border-[#14231e]/40 dark:border-[#e78662]/20"
+  },
+  "grids": {
+    "landing_hero_grid": "grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-center",
+    "app_shell_layout": "grid grid-cols-1 md:grid-cols-[72px_240px_1fr_260px] h-screen w-screen overflow-hidden bg-[#0c1411]",
+    "bento_features": "grid grid-cols-1 md:grid-cols-8 lg:grid-cols-12 gap-6"
+  },
+  "layouts": {
+    "landing_page": "High-impact narrative layout with Lenis smooth scroll, tactical hero grid, interactive live chat playground demo, feature Bento grid, speed benchmarks vs Discord, and vibrant CTA section.",
+    "auth_pages": "Split screen layout with rich animated ambient canvas on left and crisp glassmorphic login/signup form on right with Google SSO and password strength indicators.",
+    "app_3column_shell": "Left Server Rail (72px) -> Channel & DM Sidebar (240px) -> Main Chat Stream with Attachment support (1fr) -> Member Presence List & Voice Indicator (260px)."
+  },
+  "motion": {
+    "engine": "Framer Motion",
+    "hover_lift": "hover:-translate-y-0.5 transition-transform duration-200 ease-out",
+    "button_press": "active:scale-[0.98] transition-transform duration-100",
+    "stagger_children": {
+      "initial": "opacity: 0, y: 12",
+      "animate": "opacity: 1, y: 0",
+      "transition": "staggerChildren: 0.08"
+    }
+  },
+  "accessibility": {
+    "contrast_ratio": "APCA & WCAG AA compliant. Text over dark background must be #f7f3ed or #a3b8b0 with minimum 4.5:1 ratio.",
+    "data_testid_convention": "All interactive elements (buttons, inputs, server icons, channel links, user cards) MUST include kebab-case data-testid attributes (e.g. data-testid='login-submit-button', data-testid='channel-item-general').",
+    "focus_states": "focus-visible:ring-2 focus-visible:ring-[#e78662] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1411] outline-none"
+  },
+  "3d_libraries": {
+    "primary": "@react-three/fiber & @react-three/drei for ambient interactive hero particles and 3D server globe",
+    "canvas_fallback": "TSParticles or HTML5 Canvas mesh gradient for low-power devices"
+  },
+  "image_urls": {
+    "hero_setup": "https://images.unsplash.com/photo-1608403890614-ec62cb35b46e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA4Mzl8MHwxfHNlYXJjaHszfHxtb2Rlcm4lMjBnYW1pbmclMjBjb21tdW5pdHklMjBjaGF0JTIwYXZhdGFyJTIwd29ya3NwYWNlfGVufDB8fHx8MTc9MDg2Nzk1MXww&ixlib=rb-4.1.0&q=85",
+    "gaming_workspace": "https://images.unsplash.com/photo-1598550476439-6847785fcea6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA4Mzl8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBnYW1pbmclMjBjb21tdW5pdHklMjBjaGF0JTIwYXZhdGFyJTIwd29ya3NwYWNlfGVufDB8fHx8MTc9MDg2Nzk1MXww&ixlib=rb-4.1.0&q=85",
+    "avatar_1": "https://images.unsplash.com/photo-1740252117012-bb53ad05e370?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHxfHxjb29sJTIwYXZhdGFyJTIwZ2FtZXIsMTc5MDg2Nzk1NXww&ixlib=rb-4.1.0&q=85",
+    "avatar_2": "https://images.unsplash.com/photo-1656229181541-a42184b5625c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHwzfHxjb29sJTIwYXZhdGFyJTIwZ2FtZXIsMTc5MDg2Nzk1NXww&ixlib=rb-4.1.0&q=85",
+    "avatar_3": "https://images.unsplash.com/photo-1646773777979-8242c6ee91c7?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHwyfHxjb29sJTIwYXZhdGFyJTIwZ2FtZXIsMTc5MDg2Nzk1NXww&ixlib=rb-4.1.0&q=85",
+    "avatar_4": "https://images.unsplash.com/photo-1688865666698-449e64045aba?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHw0fHxjb29sJTIwYXZhdGFyJTIwZ2FtZXIsMTc5MDg2Nzk1NXww&ixlib=rb-4.1.0&q=85"
+  },
+  "component_path": {
+    "server_rail": "src/components/chat/ServerRail.js",
+    "channel_sidebar": "src/components/chat/ChannelSidebar.js",
+    "chat_area": "src/components/chat/ChatArea.js",
+    "member_list": "src/components/chat/MemberList.js",
+    "dm_inbox": "src/components/chat/DirectMessages.js",
+    "user_profile_modal": "src/components/chat/UserProfileModal.js",
+    "create_server_modal": "src/components/chat/CreateServerModal.js",
+    "landing_page": "src/pages/LandingPage.js",
+    "auth_page": "src/pages/AuthPage.js"
+  },
+  "instructions_to_main_agent": [
+    "1. Preserve exact brand tokens: Cream (#f7f3ed), Dark Green (#14231e), Coral Accent (#e78662), and Dark Canvas (#0c1411).",
+    "2. Ensure all frontend components use JavaScript (.js / .jsx) as requested.",
+    "3. Build the 3-column app shell (Server Rail + Channel/DM Sidebar + Chat Stream + Member List) for real-time chat with responsive drawer toggle for mobile.",
+    "4. Add real-time feel with instant message attachments, typing indicators, reactions, user status dots (online/idle/busy), and sound/micro-animation interactions.",
+    "5. Use Lucide icons and Framer Motion transitions across all modals, tabs, and chat messages.",
+    "6. Apply data-testid on every interactive button, input, server icon, channel item, and message card."
+  ],
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "Never use generic centered layouts or plain Bootstrap columns.",
+    "Maintain high contrast text at all times using #f7f3ed on dark surfaces.",
+    "Never use AI assistant emojis as UI icons; always use lucide-react icons.",
+    "All interactive elements MUST include kebab-case data-testid attributes."
+  ]
+}

@@ -1,0 +1,113 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@source not inline('overline');
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Space Grotesk", ui-sans-serif, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-cream: #f7f3ed;
+  --color-forest: #14231e;
+  --color-coral: #e78662;
+  --color-canvas: #0c1411;
+  --color-surface: #121e1a;
+  --color-surface2: #1a2a25;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down { from { height: 0; } to { height: var(--radix-accordion-content-height); } }
+  @keyframes accordion-up { from { height: var(--radix-accordion-content-height); } to { height: 0; } }
+}
+
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: var(--color-border, currentcolor);
+  }
+}
+
+@layer base {
+  :root {
+    --background: 150 28% 6%;
+    --foreground: 40 33% 95%;
+    --card: 156 26% 9%;
+    --card-foreground: 40 33% 95%;
+    --popover: 156 26% 9%;
+    --popover-foreground: 40 33% 95%;
+    --primary: 17 73% 65%;
+    --primary-foreground: 156 40% 8%;
+    --secondary: 156 20% 16%;
+    --secondary-foreground: 40 33% 95%;
+    --muted: 156 18% 14%;
+    --muted-foreground: 160 12% 64%;
+    --accent: 17 73% 65%;
+    --accent-foreground: 156 40% 8%;
+    --destructive: 352 89% 60%;
+    --destructive-foreground: 40 33% 95%;
+    --border: 156 20% 18%;
+    --input: 156 20% 16%;
+    --ring: 17 73% 65%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-background text-foreground;
+    margin: 0;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4 { font-family: var(--font-heading); }
+  code { font-family: var(--font-mono); }
+  ::selection { background: #e78662; color: #14231e; }
+  button:not(:disabled), [role='button']:not(:disabled) { cursor: pointer; }
+
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #1a2a25; border-radius: 9px; }
+  ::-webkit-scrollbar-thumb:hover { background: #26413a; }
+}
+
+@keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(231,134,98,0.45); } 70% { box-shadow: 0 0 0 10px rgba(231,134,98,0); } 100% { box-shadow: 0 0 0 0 rgba(231,134,98,0); } }
+@keyframes grid-pan { from { background-position: 0 0; } to { background-position: 48px 48px; } }
+
+.animate-floaty { animation: floaty 6s ease-in-out infinite; }
+.grid-bg {
+  background-image: linear-gradient(rgba(231,134,98,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(231,134,98,0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.glow-coral { box-shadow: 0 0 40px rgba(231,134,98,0.22); }
+.online-ping { animation: pulse-ring 2.2s infinite; }
