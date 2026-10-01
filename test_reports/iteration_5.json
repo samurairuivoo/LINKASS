@@ -1,0 +1,40 @@
+{
+  "summary": "Iteration 5 (voice 10-cap, Stripe BRL/pt-BR, video+screenshare UI, audio+video messages) tested. Backend: 50/50 pytest pass. New file test_iter5_voice_cap_brl_audio.py (7 tests): (1) voice room 10-cap enforced — owner + 9 members join OK, 11th distinct user gets 403 with 'Sala cheia' detail, heartbeat (existing user re-join) does NOT get 403 even when room full; (2) voice signaling store/consume works (POST /api/voice/signal, GET /api/voice/signals empties on consume, leave removes participant); (3) Stripe BRL — for pro_monthly/pro_yearly/community_monthly/community_yearly POST /api/payments/checkout returns https://checkout.stripe.com URL, loaded HTML contains BRL+pt-BR locale markers; (4) audio upload — POST /api/upload with audio/webm returns file_type audio/webm, is_image false, URL /api/files/..., and posting a channel message with file_type audio/webm persists and GET returns it. Regression (43 tests from test_linkchat_backend.py + test_new_features.py + test_iter4_payments_age.py) all still pass. Frontend (Playwright, 1920x1080, token+age-gate seeded via add_init_script): record-audio-button is visible when message-input is empty and swaps to send-message-button when text is typed ✓; message-audio <audio> and message-video <video> players render for audio/webm & video/mp4 attachments ✓; voice-join-button mounts in VoiceRoom; after clicking join (headless so getUserMedia fails but UI still renders control bar in audio-only path), voice-video-button and voice-leave-button mount but voice-screenshare-button does NOT render.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "VoiceRoom.js", "issue": "voice-screenshare-button is NOT rendered anywhere in VoiceRoom.js. The useVoice() hook already exposes `sharing` and `toggleScreenShare` (and even has screen-track plumbing in the mesh), but VoiceRoom destructures only {joined, participants, muted, videoOn, hasVideo, localStream, remoteStreams, join, leave, toggleMute, toggleVideo} and never mounts a screenshare control. The review request explicitly requires data-testid='voice-screenshare-button' to be present after join.", "selector": "[data-testid=voice-screenshare-button]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter5_voice_cap_brl_audio.py",
+    "/app/backend/tests/test_linkchat_backend.py",
+    "/app/backend/tests/test_new_features.py",
+    "/app/backend/tests/test_iter4_payments_age.py",
+    "/app/test_reports/pytest/iter5_full.xml"
+  ],
+  "action_items": [
+    "Add a voice-screenshare-button to /app/frontend/src/components/chat/VoiceRoom.js: destructure {sharing, toggleScreenShare} from useVoice and render a button with data-testid='voice-screenshare-button' inside the controls block that renders after joined (sibling of voice-video-button and voice-leave-button). Use a Lucide ScreenShare / MonitorUp icon; style consistent with other 12x12 rounded controls."
+  ],
+  "critical_code_review_comments": [
+    "VoiceRoom.js wires screen-share plumbing in the hook (useVoice.toggleScreenShare) but UI control is missing — dead code until the button is added.",
+    "voice-video-button renders only when hasVideo===true (depends on getUserMedia succeeding with a camera). On devices without a camera the user cannot toggle video — consider rendering the button unconditionally and attempting to request camera on first click (and showing a toast on failure).",
+    "/api/payments/status does NOT return currency or amount even though they are stored in the payment_transactions document — consider including them in the response for easier auditing/testing.",
+    "stripe.Price.list and stripe.checkout.Session.create run synchronously inside async handlers (blocks event loop). Wrap in run_in_executor or use httpx-based async client.",
+    "server.py is ~789 lines — split payments/voice routes into submodules.",
+    "@app.on_event is deprecated (use lifespan).",
+    "voice_signals and typing collections lack TTL indexes — leftover rows accumulate forever."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter5_voice_cap_brl_audio.py (NEW — 7 pytest cases)"
+  ],
+  "success_rate": {"backend": "100% (50/50)", "frontend": "80% (4/5 — screenshare button missing)"},
+  "test_credentials": "No seeded accounts. Fresh users created via /api/auth/signup with birth_date='2000-01-01'. Age-gate overlay bypassed via localStorage.setItem('lc_age_verified','1') + localStorage.setItem('lc_token',...) + localStorage.setItem('lc_user',...) injected before page.goto.",
+  "seed_data_creation": "Each test creates a disposable TEST_<uuid>@test.com user. Voice-cap test creates 1 owner + 10 members + 1 'Eleventh' user. Frontend run creates 1 'FE2' user, server TEST_FE2 with 'vozfe' voice channel and 2 messages (audio/webm + video/mp4).",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend 10-cap + BRL + audio upload all verified. Only remaining failure is the missing voice-screenshare-button in VoiceRoom.js — once the main agent adds it, re-run the frontend screenshare presence check: in a joined voice channel assert `await page.locator('[data-testid=\"voice-screenshare-button\"]').count() >= 1`. Also useful: BRL currency can be verified by downloading the checkout_url HTML and asserting 'BRL' + 'pt-BR' are present (the /api/payments/status endpoint does NOT return currency).",
+  "rca of the issue": "voice-screenshare-button missing — root cause: VoiceRoom.js was updated to add voice-video-button but never added the parallel screenshare button. The underlying hook useVoice.js already provides `sharing`/`toggleScreenShare` plus getDisplayMedia logic (lines 56-58, 171-175, 188), so this is purely a UI gap. Fix: in VoiceRoom.js destructure sharing + toggleScreenShare from useVoice and render <button data-testid='voice-screenshare-button' onClick={toggleScreenShare}> in the controls flex row that renders after joined (around line 70, between voice-video-button and voice-leave-button)."
+}

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Volume2, Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
+import { Volume2, Mic, MicOff, PhoneOff, Video, VideoOff, MonitorUp, MonitorOff } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar } from "./Avatar";
 import { useVoice } from "@/hooks/useVoice";
@@ -22,7 +22,7 @@ function MediaTile({ stream, muted, name, you }) {
 }
 
 export default function VoiceRoom({ channel, user }) {
-  const { joined, participants, muted, videoOn, hasVideo, localStream, remoteStreams, join, leave, toggleMute, toggleVideo } = useVoice(channel.channel_id, user);
+  const { joined, participants, muted, videoOn, sharing, hasVideo, localStream, remoteStreams, join, leave, toggleMute, toggleVideo, toggleScreenShare } = useVoice(channel.channel_id, user);
 
   const doJoin = async () => {
     const ok = await join();
@@ -63,11 +63,12 @@ export default function VoiceRoom({ channel, user }) {
             <button data-testid="voice-mute-button" onClick={toggleMute} title={muted ? "Ativar microfone" : "Silenciar"} className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${muted ? "bg-[#f43f5e] text-white" : "bg-[#17264b] text-cream hover:bg-[#22407a]"}`}>
               {muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
-            {hasVideo && (
-              <button data-testid="voice-video-button" onClick={toggleVideo} title={videoOn ? "Desligar câmera" : "Ligar câmera"} className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${videoOn ? "bg-[#19a9ff] text-[#0a1228]" : "bg-[#17264b] text-cream hover:bg-[#22407a]"}`}>
-                {videoOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
-              </button>
-            )}
+            <button data-testid="voice-video-button" onClick={toggleVideo} disabled={!hasVideo} title={videoOn ? "Desligar câmera" : "Ligar câmera"} className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 ${videoOn ? "bg-[#19a9ff] text-[#0a1228]" : "bg-[#17264b] text-cream hover:bg-[#22407a]"}`}>
+              {videoOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+            </button>
+            <button data-testid="voice-screenshare-button" onClick={toggleScreenShare} title={sharing ? "Parar compartilhamento" : "Compartilhar tela"} className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${sharing ? "bg-[#19a9ff] text-[#0a1228]" : "bg-[#17264b] text-cream hover:bg-[#22407a]"}`}>
+              {sharing ? <MonitorOff className="w-5 h-5" /> : <MonitorUp className="w-5 h-5" />}
+            </button>
             <button data-testid="voice-leave-button" onClick={leave} title="Sair da chamada" className="w-12 h-12 rounded-full bg-[#f43f5e] text-white flex items-center justify-center hover:-translate-y-0.5 transition-transform">
               <PhoneOff className="w-5 h-5" />
             </button>
