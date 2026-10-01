@@ -1,0 +1,27 @@
+{
+  "summary": "Re-tested only the previously-failing screenshare control in VoiceRoom.js (iteration 5 action item). Source inspection confirms: voice-screenshare-button is now rendered inside the controls block (VoiceRoom.js line 69) alongside voice-mute-button (63), voice-video-button (66, now always rendered with disabled={!hasVideo}), and voice-leave-button (72). useVoice.js exports toggleScreenShare + sharing + getDisplayMedia plumbing (lines 161-178, 188). Live Playwright run (1920x1080, mic/camera permissions granted, age-gate + token seeded via add_init_script) created a fresh user via /api/auth/signup, created a server, created a voice channel (type='voice'), navigated to it, clicked voice-join-button, and after join all four control buttons mounted with count=1: voice-mute-button, voice-video-button, voice-screenshare-button, voice-leave-button. Screenshot voiceroom_after_join.png visually confirms mic / disabled-camera / screenshare / red leave icons in the control bar. Backend NOT re-tested (50/50 already green in iteration 5). Fix verified end-to-end.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_5.json",
+    "/app/backend/tests/test_iter5_voice_cap_brl_audio.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Minor: iteration_5 noted channel create API uses 'type' field (not 'channel_type' as the review request's testid hint 'channel-type-voice' implied). This caused one abort on first run — frontend tests should use {name, type: 'voice'} payload. (Not a bug, just doc clarity for next agent.)",
+    "server-tile-<id> and channel-item-<id> data-testids were NOT found on the rail/channel list; tests had to fall back to get_by_text. Adding stable data-testids to the server rail tiles and channel list items would make tests more robust.",
+    "Carry-overs from iter5 still open (non-blocking): /api/payments/status missing currency/amount; sync stripe calls in async handlers; server.py ~789 lines; deprecated @app.on_event; voice_signals/typing collections lack TTL indexes."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not re-tested (iter5: 100% 50/50)", "frontend": "100% (4/4 voice controls present after join)"},
+  "test_credentials": "No seeded accounts. Fresh signup via POST /api/auth/signup with birth_date='2000-01-01'. Age-gate bypassed via localStorage.setItem('lc_age_verified','1') + lc_token + lc_user in add_init_script.",
+  "seed_data_creation": "Created 1 disposable TEST_fe_<uuid>@test.com user, 1 server TEST_SS, 1 voice channel 'voiceSS' (type=voice).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 5's single frontend regression (missing voice-screenshare-button) is RESOLVED. VoiceRoom.js now renders all four voice controls. For future voice tests: use channel create payload {name, type: 'voice'} (NOT 'channel_type'). To reach a voice channel the Servidores tab must be clicked first (app opens on Conversas by default); server rail tiles lack data-testid='server-tile-<id>', so use get_by_text(serverName) or add testids. Grant microphone/camera permissions via context.grant_permissions(['microphone','camera'], origin=BASE) — join still succeeds in audio-only path even though headless has no real camera.",
+  "rca of the issue": "N/A — fix confirmed working. VoiceRoom.js now destructures sharing + toggleScreenShare from useVoice and renders <button data-testid='voice-screenshare-button'> between voice-video-button and voice-leave-button in the post-join controls row, exactly as recommended in iteration_5.json."
+}

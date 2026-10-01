@@ -39,7 +39,14 @@ Rebuilt the Discord-competitor as a clean full-stack app on the Emergent stack (
 2. Vídeo nas chamadas de voz.
 3. Verificação de idade no servidor (hoje é gate client-side 13+).
 
-## Updates 2026-06 (iteração rebrand + original)
+## Updates 2026-06 (chamadas + pagamentos + mídia)
+- Stripe real (sandbox test): planos mensal/anual em BRL, checkout com locale pt-BR.
+- Chamadas de voz/vídeo via WebRTC mesh com STUN **+ TURN (openrelay)** para conectar entre redes/NAT.
+- Compartilhamento de tela (getDisplayMedia) e limite de **10 participantes por sala**.
+- Chat: mensagens de **áudio** (gravação via MediaRecorder) e **vídeo**, com players inline.
+- Verificação de idade (13+) exigida no cadastro (backend) + age gate na entrada.
+- Logo oficial do usuário aplicada (login, landing, favicon). Banco de dados zerado (sem usuários fake).
+- Testes: 50/50 backend + frontend 100% (iterações 5 e 6).
 - Rebrand completo para "Linkas"; removidas todas as referências ao Discord.
 - Recoloração para a paleta ORIGINAL do projeto (navy #070d22, gradiente #5948ff→#19a9ff, ciano).
 - Landing reconstruída idêntica ao original (hero "Conecte-se através de um link", phones, Como funciona, Recursos, FAQ) + nova seção de Planos (mensal/anual, 3 tiers).
