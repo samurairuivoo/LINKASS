@@ -35,6 +35,14 @@ Rebuilt the Discord-competitor as a clean full-stack app on the Emergent stack (
 - P2: Notificações, busca de mensagens, temas; WebSocket real-time em vez de polling.
 
 ## Next tasks
-1. Voice channels (WebRTC) — explicitamente planejado para "logo em seguida".
-2. Typing indicator + reactions.
-3. Object storage migration for attachments.
+1. Pagamento real nos planos (Stripe) — hoje os planos são apenas de exibição (mensal/anual).
+2. Vídeo nas chamadas de voz.
+3. Verificação de idade no servidor (hoje é gate client-side 13+).
+
+## Updates 2026-06 (iteração rebrand + original)
+- Rebrand completo para "Linkas"; removidas todas as referências ao Discord.
+- Recoloração para a paleta ORIGINAL do projeto (navy #070d22, gradiente #5948ff→#19a9ff, ciano).
+- Landing reconstruída idêntica ao original (hero "Conecte-se através de um link", phones, Como funciona, Recursos, FAQ) + nova seção de Planos (mensal/anual, 3 tiers).
+- Age Gate 13+ como tela inicial antes de acessar a plataforma (bloqueio para menores).
+- Barra fixa no app para alternar entre Conversas e Servidores + botão Voltar ao site.
+- Testes: 35/35 backend + frontend 100%.
