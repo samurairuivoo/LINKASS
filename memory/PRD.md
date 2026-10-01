@@ -39,6 +39,13 @@ Rebuilt the Discord-competitor as a clean full-stack app on the Emergent stack (
 2. Vídeo nas chamadas de voz.
 3. Verificação de idade no servidor (hoje é gate client-side 13+).
 
+## Updates 2026-06 (correção chamadas — sem tela preta)
+- Entrar na chamada agora usa **áudio primeiro** (sem tela preta); câmera e tela são opcionais.
+- Via de vídeo pré-negociada (transceiver) → ligar câmera/compartilhar tela usa replaceTrack, sem renegociar.
+- MediaTile mostra avatar por padrão e só exibe vídeo quando há faixa de vídeo ativa.
+- Mensagens de erro específicas (permissão negada / sem microfone / preview embutido / sala cheia).
+- Verificado: 7/7 backend + frontend 100% (iteração 8), sem tela preta, câmera e tela OK.
+
 ## Updates 2026-06 (chamadas + pagamentos + mídia)
 - Stripe real (sandbox test): planos mensal/anual em BRL, checkout com locale pt-BR.
 - Chamadas de voz/vídeo via WebRTC mesh com STUN **+ TURN (openrelay)** para conectar entre redes/NAT.

@@ -1,0 +1,24 @@
+{
+  "summary": "Iteration 8 — Verified NO BLACK SCREEN fix on voice/video join. Backend regression: 7/7 pytest tests pass in test_iter5_voice_cap_brl_audio.py (10-cap/11th rejected, voice signaling store+consume, Stripe BRL amounts for 4 lookup_keys, audio webm upload). Frontend Playwright with context.grant_permissions(['microphone','camera']): fresh signup, created server + voice channel via API, navigated /app -> Servidores -> server -> voz channel. voice-count 0/10 before, voice-join-button clicked. After join: NO error toast, NO pageerror. Self tile (voice-tile-<name>) <video> element has 'hidden' class — avatar is rendered (NOT a black video). voice-count -> 1/10. All 4 controls mounted (voice-mute-button, voice-video-button, voice-screenshare-button, voice-leave-button). Camera toggle ON removed 'hidden' from <video> (visible fake feed), toggle OFF restored 'hidden' (back to avatar). voice-screenshare-button clicked without crash (getDisplayMedia returned error gracefully). voice-leave-button worked (voice-join-button re-mounts). Only 2 benign 401 console errors (unrelated, likely initial auth probing). ALL CHECKS PASSED.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter5_voice_cap_brl_audio.py",
+    "/app/test_reports/pytest/iter8_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "VoiceRoom MediaTile showVideo logic is correct — <video> only unhides when a live, enabled, unmuted video track exists; avatar is default. Good defensive polling (800ms) handles track state transitions.",
+    "useVoice.createPeer pre-adds a sendrecv video transceiver so replaceTrack can swap camera/screen without renegotiation — clean, correct approach.",
+    "toggleScreenShare error path returns {error:'screen'} but doJoin maps it to a toast.message (neutral) — correct behavior since user may have intentionally cancelled.",
+    "Carry-over (non-blocking): server.py ~789 lines; deprecated @app.on_event; missing TTL indexes on voice_signals/typing collections; two 401 console messages during /app bootstrap (worth investigating but non-blocking)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (no black screen, join+count+4 controls+camera toggle+screenshare click+leave all PASS, 0 pageerrors)"},
+  "test_credentials": "Fresh signup TEST_v8_<uuid>@test.com via /api/auth/signup birth_date 2000-01-01. localStorage lc_token/lc_user/lc_age_verified=1 seeded via add_init_script before goto.",
+  "seed_data_creation": "1 disposable user TEST_v8_*, 1 server TEST_V8SRV_<suffix>, 1 voice channel voz<suffix> (type=voice).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Black-screen regression is fixed and verified. Key assertion: after voice-join-button click, the <video> element inside voice-tile-<name> has class containing 'hidden' (avatar shown). After clicking voice-video-button, 'hidden' is removed. headless Chromium + grant_permissions(['microphone','camera'], origin=BASE) is sufficient to make getUserMedia succeed with synthetic feed. getDisplayMedia still errors (headless), handled gracefully with a toast.message, no crash.",
+  "rca of the issue": "N/A — fix verified. Root cause of prior black screen: join() previously requested audio+video which produced a dark fake camera track that always rendered. New join() requests audio:true,video:false; createPeer pre-negotiates a sendrecv video transceiver so camera/screen can later be sent via replaceTrack without renegotiation; MediaTile only unhides <video> when a live, enabled, unmuted video track exists."
+}
