@@ -1,0 +1,23 @@
+{
+  "summary": "Verified voice/video join fix (iteration 7). Backend regression: all 7 tests pass in test_iter5_voice_cap_brl_audio.py including the 10-cap/11th-rejected test. Frontend Playwright run with context.grant_permissions(['microphone','camera']): fresh signup, created server TEST_V8SRV + voice channel 'voz8' (type:'voice'), navigated via /app -> Servidores -> server tile -> channel, clicked voice-join-button. Result: NO error toast, NO pageerror. voice-count went from 0/10 -> 1/10. All 4 controls mounted (voice-mute-button, voice-video-button, voice-screenshare-button, voice-leave-button). voice-video-button was NOT disabled (hasVideo=true), clicking it toggled the camera on, local <video> element received srcObject with 1 enabled video track and rendered the fake green feed. Full flow passed end-to-end.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter5_voice_cap_brl_audio.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "useVoice.join swallows the inner audio-only getUserMedia rejection inside a nested try; if it also fails, the catch(e) still fires on the outer try — correct, but worth a code comment.",
+    "toggleVideo silently swallows getUserMedia failures (empty catch) when turning camera on-demand; user won't see any toast if the on-demand camera request is denied. Consider surfacing a toast there too.",
+    "Carry-overs still open from iter5/6 (non-blocking): /api/payments/status currency/amount, sync stripe in async handlers, server.py ~789 lines, deprecated @app.on_event, missing TTL indexes on voice_signals/typing."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "100% (join + 4 controls + video toggle, no errors, no pageerrors)"},
+  "test_credentials": "Fresh signup TEST_v8_*@test.com via /api/auth/signup birth_date 2000-01-01. localStorage keys lc_token/lc_user/lc_age_verified=1 seeded via add_init_script.",
+  "seed_data_creation": "1 disposable user, server TEST_V8SRV, voice channel voz8 (type=voice).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The voice/video join fix is verified. In this environment headless Chromium + grant_permissions(['microphone','camera']) is enough to make getUserMedia({audio,video}) succeed with a synthetic feed — no --use-fake-device launch flags needed. Flow: /app route (NOT /) with lc_token/lc_user seeded + lc_age_verified=1 -> click 'Servidores' tab -> click server by name -> click channel by name -> voice-join-button mounts. Channel create payload is {name, type:'voice'}. Server rail tiles and channel list items still lack stable data-testids; fallback get_by_text works.",
+  "rca of the issue": "N/A — fix verified. useVoice.join now (a) tries audio+video, falls back to audio-only if video missing, (b) returns granular {error} codes, (c) toggleVideo acquires camera on-demand. VoiceRoom.doJoin maps each error code to a specific Portuguese toast. In this run audio+video succeeded on first attempt, so the audio-only fallback and error-toast paths were not exercised live, but the code paths are present and the original crash is gone (no pageerror, no error toast)."
+}

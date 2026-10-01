@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import api from "@/lib/api";
 
-// STUN for discovery + public TURN relays so peers connect across different networks/NAT.
+// STUN (descoberta) + TURN público (relay) para conectar entre redes/NAT diferentes.
 const ICE = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -18,28 +18,26 @@ export function useVoice(channelId, user) {
   const [muted, setMuted] = useState(false);
   const [videoOn, setVideoOn] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const [hasVideo, setHasVideo] = useState(false);
-  const [localStreamState, setLocalStreamState] = useState(null);
+  const [localVideoStream, setLocalVideoStream] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState({});
 
-  const localStream = useRef(null);
-  const screenStream = useRef(null);
+  const localStream = useRef(null); // apenas áudio
   const cameraTrack = useRef(null);
+  const screenStream = useRef(null);
   const peers = useRef({});
+  const videoSenders = useRef({}); // uid -> RTCRtpSender (via de vídeo pré-criada)
   const pollRef = useRef(null);
   const joinedRef = useRef(false);
+  const videoOnRef = useRef(false);
 
-  const replaceVideoForAll = useCallback((track) => {
-    Object.values(peers.current).forEach((pc) => {
-      const sender = pc.getSenders().find((s) => s.__video);
-      if (sender) sender.replaceTrack(track).catch(() => {});
-      else if (track) { const ns = pc.addTrack(track, localStream.current || new MediaStream([track])); ns.__video = true; }
-    });
+  const setOutgoingVideo = useCallback((track) => {
+    Object.values(videoSenders.current).forEach((s) => { try { s.replaceTrack(track); } catch {} });
+    setLocalVideoStream(track ? new MediaStream([track]) : null);
   }, []);
 
   const cleanupPeer = useCallback((uid) => {
-    const pc = peers.current[uid];
-    if (pc) { try { pc.close(); } catch {} delete peers.current[uid]; }
+    try { peers.current[uid]?.close(); } catch {}
+    delete peers.current[uid]; delete videoSenders.current[uid];
     setRemoteStreams((s) => { const n = { ...s }; delete n[uid]; return n; });
   }, []);
 
@@ -47,37 +45,24 @@ export function useVoice(channelId, user) {
     if (peers.current[otherId]) return peers.current[otherId];
     const pc = new RTCPeerConnection(ICE);
     peers.current[otherId] = pc;
-    if (localStream.current) {
-      localStream.current.getTracks().forEach((t) => {
-        const sender = pc.addTrack(t, localStream.current);
-        if (t.kind === "video") sender.__video = true;
-      });
-    }
-    if (sharing && screenStream.current) {
-      const st = screenStream.current.getVideoTracks()[0];
-      if (st && !pc.getSenders().some((s) => s.__video)) { const ns = pc.addTrack(st, screenStream.current); ns.__video = true; }
-    }
-    pc.onicecandidate = (e) => {
-      if (e.candidate) api.post("/voice/signal", { channel_id: channelId, to: otherId, type: "ice", payload: e.candidate.toJSON() }).catch(() => {});
-    };
-    pc.ontrack = (e) => {
-      const stream = e.streams[0];
-      setRemoteStreams((s) => ({ ...s, [otherId]: stream }));
-    };
+    if (localStream.current) localStream.current.getAudioTracks().forEach((t) => pc.addTrack(t, localStream.current));
+    // via de vídeo sempre presente => trocar câmera/tela depois NÃO exige renegociar
+    const vtrans = pc.addTransceiver("video", { direction: "sendrecv" });
+    videoSenders.current[otherId] = vtrans.sender;
+    const current = (screenStream.current && screenStream.current.getVideoTracks()[0]) || (videoOnRef.current && cameraTrack.current) || null;
+    if (current) { try { vtrans.sender.replaceTrack(current); } catch {} }
+    pc.onicecandidate = (e) => { if (e.candidate) api.post("/voice/signal", { channel_id: channelId, to: otherId, type: "ice", payload: e.candidate.toJSON() }).catch(() => {}); };
+    pc.ontrack = (e) => { const stream = e.streams[0] || new MediaStream([e.track]); setRemoteStreams((s) => ({ ...s, [otherId]: stream })); };
     if (initiator) {
       pc.onnegotiationneeded = async () => {
-        try {
-          await pc.setLocalDescription(await pc.createOffer());
-          await api.post("/voice/signal", { channel_id: channelId, to: otherId, type: "offer", payload: { sdp: pc.localDescription.sdp, type: pc.localDescription.type } });
-        } catch {}
+        try { await pc.setLocalDescription(await pc.createOffer()); await api.post("/voice/signal", { channel_id: channelId, to: otherId, type: "offer", payload: { sdp: pc.localDescription.sdp, type: pc.localDescription.type } }); } catch {}
       };
     }
     return pc;
-  }, [channelId, sharing]);
+  }, [channelId]);
 
   const handleSignal = useCallback(async (sig) => {
-    const from = sig.from;
-    let pc = peers.current[from];
+    const from = sig.from; let pc = peers.current[from];
     if (sig.type === "offer") {
       if (!pc) pc = createPeer(from, false);
       await pc.setRemoteDescription(new RTCSessionDescription(sig.payload));
@@ -94,12 +79,9 @@ export function useVoice(channelId, user) {
     if (!joinedRef.current) return;
     try {
       const pres = await api.post(`/channels/${channelId}/voice/join`);
-      const list = pres.data || [];
-      setParticipants(list);
+      const list = pres.data || []; setParticipants(list);
       const ids = list.map((p) => p.user_id);
-      list.forEach((p) => {
-        if (p.user_id !== user.user_id && !peers.current[p.user_id]) createPeer(p.user_id, user.user_id < p.user_id);
-      });
+      list.forEach((p) => { if (p.user_id !== user.user_id && !peers.current[p.user_id]) createPeer(p.user_id, user.user_id < p.user_id); });
       Object.keys(peers.current).forEach((uid) => { if (!ids.includes(uid)) cleanupPeer(uid); });
       const sig = await api.get(`/voice/signals`, { params: { channel_id: channelId } });
       for (const s of sig.data) await handleSignal(s);
@@ -110,47 +92,29 @@ export function useVoice(channelId, user) {
     if (!navigator.mediaDevices?.getUserMedia) return { error: "insecure" };
     let stream;
     try {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        stream.getVideoTracks().forEach((t) => (t.enabled = false));
-        cameraTrack.current = stream.getVideoTracks()[0] || null;
-        setHasVideo(!!cameraTrack.current);
-      } catch (e1) {
-        // tenta só áudio (câmera ausente ou bloqueada) — voz continua funcionando
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        setHasVideo(false);
-      }
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     } catch (e) {
       const n = e?.name || "";
-      if (n === "NotAllowedError" || n === "SecurityError" || n === "PermissionDeniedError") return { error: "denied" };
-      if (n === "NotFoundError" || n === "DevicesNotFoundError" || n === "NotReadableError" || n === "OverconstrainedError") return { error: "nodevice" };
+      if (n.includes("NotAllowed") || n.includes("Security") || n.includes("Permission")) return { error: "denied" };
+      if (n.includes("NotFound") || n.includes("NotReadable") || n.includes("Overconstrained")) return { error: "nodevice" };
       return { error: "other" };
     }
     localStream.current = stream;
-    setLocalStreamState(stream);
-    try {
-      await api.post(`/channels/${channelId}/voice/join`);
-    } catch (e) {
-      stream.getTracks().forEach((t) => t.stop());
-      localStream.current = null; setLocalStreamState(null);
-      return e?.response?.status === 403 ? { error: "full" } : { error: "other" };
-    }
-    joinedRef.current = true;
-    setJoined(true);
-    await tick();
-    pollRef.current = setInterval(tick, 1200);
+    try { await api.post(`/channels/${channelId}/voice/join`); }
+    catch (e) { stream.getTracks().forEach((t) => t.stop()); localStream.current = null; return e?.response?.status === 403 ? { error: "full" } : { error: "other" }; }
+    joinedRef.current = true; setJoined(true);
+    await tick(); pollRef.current = setInterval(tick, 1200);
     return true;
   }, [channelId, tick]);
 
   const leave = useCallback(async () => {
-    joinedRef.current = false;
-    setJoined(false); setSharing(false); setVideoOn(false);
+    joinedRef.current = false; setJoined(false); setSharing(false); setVideoOn(false); videoOnRef.current = false;
     if (pollRef.current) clearInterval(pollRef.current);
     Object.keys(peers.current).forEach(cleanupPeer);
-    screenStream.current?.getTracks().forEach((t) => t.stop());
-    localStream.current?.getTracks().forEach((t) => t.stop());
-    screenStream.current = null; localStream.current = null; cameraTrack.current = null;
-    setRemoteStreams({}); setParticipants([]); setLocalStreamState(null);
+    cameraTrack.current?.stop(); cameraTrack.current = null;
+    screenStream.current?.getTracks().forEach((t) => t.stop()); screenStream.current = null;
+    localStream.current?.getTracks().forEach((t) => t.stop()); localStream.current = null;
+    setRemoteStreams({}); setParticipants([]); setLocalVideoStream(null);
     try { await api.post(`/channels/${channelId}/voice/leave`); } catch {}
   }, [channelId, cleanupPeer]);
 
@@ -160,53 +124,41 @@ export function useVoice(channelId, user) {
   }, []);
 
   const toggleVideo = useCallback(async () => {
-    if (sharing) return;
-    if (!cameraTrack.current) {
-      // usuário entrou só com voz — tenta ligar a câmera sob demanda
-      try {
-        const vs = await navigator.mediaDevices.getUserMedia({ video: true });
-        const vt = vs.getVideoTracks()[0];
-        cameraTrack.current = vt;
-        localStream.current?.addTrack(vt);
-        setHasVideo(true);
-        replaceVideoForAll(vt);
-        vt.enabled = true;
-        setVideoOn(true);
-        setLocalStreamState(localStream.current);
-      } catch {}
-      return;
+    if (sharing) return { error: "sharing" };
+    if (videoOnRef.current && cameraTrack.current) {
+      cameraTrack.current.stop(); cameraTrack.current = null; videoOnRef.current = false; setVideoOn(false); setOutgoingVideo(null); return true;
     }
-    cameraTrack.current.enabled = !cameraTrack.current.enabled;
-    setVideoOn(cameraTrack.current.enabled);
-    setLocalStreamState(localStream.current);
-  }, [sharing, replaceVideoForAll]);
+    try {
+      const vs = await navigator.mediaDevices.getUserMedia({ video: true });
+      cameraTrack.current = vs.getVideoTracks()[0];
+      videoOnRef.current = true; setVideoOn(true); setOutgoingVideo(cameraTrack.current);
+      cameraTrack.current.onended = () => { cameraTrack.current = null; videoOnRef.current = false; setVideoOn(false); setOutgoingVideo(null); };
+      return true;
+    } catch { return { error: "camera" }; }
+  }, [sharing, setOutgoingVideo]);
 
   const toggleScreenShare = useCallback(async () => {
     if (sharing) {
-      screenStream.current?.getTracks().forEach((t) => t.stop());
-      screenStream.current = null;
-      if (cameraTrack.current) cameraTrack.current.enabled = false;
-      replaceVideoForAll(cameraTrack.current || null);
-      setVideoOn(false); setSharing(false); setLocalStreamState(localStream.current);
-      return;
+      screenStream.current?.getTracks().forEach((t) => t.stop()); screenStream.current = null; setSharing(false);
+      setOutgoingVideo(videoOnRef.current && cameraTrack.current ? cameraTrack.current : null); return true;
     }
     try {
       const ss = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-      screenStream.current = ss;
-      const track = ss.getVideoTracks()[0];
-      replaceVideoForAll(track);
-      track.onended = () => { if (joinedRef.current && screenStream.current) toggleScreenShare(); };
-      setSharing(true); setLocalStreamState(ss);
-    } catch {}
-  }, [sharing, replaceVideoForAll]);
+      screenStream.current = ss; const track = ss.getVideoTracks()[0];
+      setSharing(true); setOutgoingVideo(track);
+      track.onended = () => { screenStream.current = null; setSharing(false); setOutgoingVideo(videoOnRef.current && cameraTrack.current ? cameraTrack.current : null); };
+      return true;
+    } catch { return { error: "screen" }; }
+  }, [sharing, setOutgoingVideo]);
 
   useEffect(() => () => {
     joinedRef.current = false;
     if (pollRef.current) clearInterval(pollRef.current);
     Object.values(peers.current).forEach((pc) => { try { pc.close(); } catch {} });
-    localStream.current?.getTracks().forEach((t) => t.stop());
+    cameraTrack.current?.stop();
     screenStream.current?.getTracks().forEach((t) => t.stop());
+    localStream.current?.getTracks().forEach((t) => t.stop());
   }, []);
 
-  return { joined, participants, muted, videoOn, sharing, hasVideo, localStream: localStreamState, remoteStreams, join, leave, toggleMute, toggleVideo, toggleScreenShare };
+  return { joined, participants, muted, videoOn, sharing, localVideoStream, remoteStreams, join, leave, toggleMute, toggleVideo, toggleScreenShare };
 }
