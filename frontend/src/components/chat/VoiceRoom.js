@@ -25,8 +25,16 @@ export default function VoiceRoom({ channel, user }) {
   const { joined, participants, muted, videoOn, sharing, hasVideo, localStream, remoteStreams, join, leave, toggleMute, toggleVideo, toggleScreenShare } = useVoice(channel.channel_id, user);
 
   const doJoin = async () => {
-    const ok = await join();
-    if (!ok) toast.error("Não foi possível acessar microfone/câmera. Permita o acesso.");
+    const r = await join();
+    if (r === true) return;
+    const msgs = {
+      denied: "Permissão negada. Clique no ícone de cadeado na barra de endereço e permita o microfone/câmera, depois tente de novo.",
+      nodevice: "Nenhum microfone encontrado. Conecte um microfone (ou fones com mic) e tente novamente.",
+      insecure: "Para usar áudio e vídeo, abra o Linkas em uma aba própria do navegador (fora de um preview embutido).",
+      full: "A sala está cheia (máximo de 10 participantes).",
+      other: "Não foi possível iniciar a chamada. Tente novamente.",
+    };
+    toast.error(msgs[r?.error] || msgs.other);
   };
 
   return (
@@ -34,7 +42,8 @@ export default function VoiceRoom({ channel, user }) {
       <div className="h-14 px-5 flex items-center gap-2 border-b border-[#19a9ff]/10">
         <Volume2 className="w-5 h-5 text-[#93a4cc]" />
         <span className="font-heading font-semibold" data-testid="voice-title">{channel.name}</span>
-        <span className="text-sm text-[#93a4cc] ml-2 hidden sm:inline">canal de voz e vídeo</span>
+        <span className="text-sm text-[#93a4cc] ml-2 hidden sm:inline">canal de voz e vídeo · até 10</span>
+        <span className="ml-auto text-xs text-[#93a4cc]" data-testid="voice-count">{participants.length}/10 na sala</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">

@@ -107,6 +107,7 @@ export function useVoice(channelId, user) {
   }, [channelId, user, createPeer, cleanupPeer, handleSignal]);
 
   const join = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) return { error: "insecure" };
     let stream;
     try {
       try {
@@ -114,11 +115,17 @@ export function useVoice(channelId, user) {
         stream.getVideoTracks().forEach((t) => (t.enabled = false));
         cameraTrack.current = stream.getVideoTracks()[0] || null;
         setHasVideo(!!cameraTrack.current);
-      } catch {
+      } catch (e1) {
+        // tenta só áudio (câmera ausente ou bloqueada) — voz continua funcionando
         stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         setHasVideo(false);
       }
-    } catch { return false; }
+    } catch (e) {
+      const n = e?.name || "";
+      if (n === "NotAllowedError" || n === "SecurityError" || n === "PermissionDeniedError") return { error: "denied" };
+      if (n === "NotFoundError" || n === "DevicesNotFoundError" || n === "NotReadableError" || n === "OverconstrainedError") return { error: "nodevice" };
+      return { error: "other" };
+    }
     localStream.current = stream;
     setLocalStreamState(stream);
     try {
@@ -126,7 +133,7 @@ export function useVoice(channelId, user) {
     } catch (e) {
       stream.getTracks().forEach((t) => t.stop());
       localStream.current = null; setLocalStreamState(null);
-      return e?.response?.status === 403 ? "full" : false;
+      return e?.response?.status === 403 ? { error: "full" } : { error: "other" };
     }
     joinedRef.current = true;
     setJoined(true);
@@ -152,11 +159,27 @@ export function useVoice(channelId, user) {
     if (t) { t.enabled = !t.enabled; setMuted(!t.enabled); }
   }, []);
 
-  const toggleVideo = useCallback(() => {
+  const toggleVideo = useCallback(async () => {
     if (sharing) return;
-    const t = cameraTrack.current;
-    if (t) { t.enabled = !t.enabled; setVideoOn(t.enabled); setLocalStreamState(localStream.current); }
-  }, [sharing]);
+    if (!cameraTrack.current) {
+      // usuário entrou só com voz — tenta ligar a câmera sob demanda
+      try {
+        const vs = await navigator.mediaDevices.getUserMedia({ video: true });
+        const vt = vs.getVideoTracks()[0];
+        cameraTrack.current = vt;
+        localStream.current?.addTrack(vt);
+        setHasVideo(true);
+        replaceVideoForAll(vt);
+        vt.enabled = true;
+        setVideoOn(true);
+        setLocalStreamState(localStream.current);
+      } catch {}
+      return;
+    }
+    cameraTrack.current.enabled = !cameraTrack.current.enabled;
+    setVideoOn(cameraTrack.current.enabled);
+    setLocalStreamState(localStream.current);
+  }, [sharing, replaceVideoForAll]);
 
   const toggleScreenShare = useCallback(async () => {
     if (sharing) {
