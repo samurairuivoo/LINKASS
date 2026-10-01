@@ -20,7 +20,7 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  useEffect(() => { document.title = "LinkChat — O chat da sua comunidade"; }, []);
+  useEffect(() => { document.title = "Linkas — O chat da sua comunidade"; }, []);
 
   const go = () => navigate(user ? "/app" : "/auth");
 
@@ -33,7 +33,7 @@ export default function LandingPage() {
             <div className="w-9 h-9 rounded-xl bg-[#e78662] flex items-center justify-center glow-coral">
               <Hash className="w-5 h-5 text-[#0c1411]" strokeWidth={3} />
             </div>
-            <span className="font-heading font-bold text-xl">LinkChat</span>
+            <span className="font-heading font-bold text-xl">Linkas</span>
           </div>
           <button
             data-testid="nav-cta-button"
@@ -54,7 +54,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
           >
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#e78662]/30 bg-[#e78662]/10 text-[#e78662] text-xs font-medium tracking-wider uppercase mb-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" /> melhor que o discord
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" /> o seu espaço, do seu jeito
             </div>
             <h1 className="font-heading font-bold text-4xl sm:text-5xl lg:text-6xl leading-[1.05] tracking-tight">
               A casa da sua<br />
@@ -97,7 +97,7 @@ export default function LandingPage() {
             <div className="relative animate-floaty">
               <div className="absolute -inset-4 bg-[#e78662]/20 blur-3xl rounded-full" />
               <div className="relative rounded-3xl overflow-hidden border border-[#e78662]/20 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-                <img src={HERO_IMG} alt="Comunidade LinkChat" className="w-full h-[420px] object-cover" />
+                <img src={HERO_IMG} alt="Comunidade Linkas" className="w-full h-[420px] object-cover" />
                 <div className="absolute inset-x-4 bottom-4 backdrop-blur-xl bg-[#121e1a]/80 border border-[#e78662]/20 rounded-2xl p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-[#22c55e] flex items-center justify-center text-[#0c1411] font-bold">L</div>
@@ -118,7 +118,7 @@ export default function LandingPage() {
         <div className="max-w-2xl">
           <p className="text-[#e78662] text-xs font-medium tracking-widest uppercase mb-3">Recursos</p>
           <h2 className="font-heading font-semibold text-2xl sm:text-3xl lg:text-4xl tracking-tight">
-            Tudo que você ama no Discord — só que mais bonito e mais seu.
+            Um jeito novo e bonito de reunir a sua comunidade em tempo real.
           </h2>
         </div>
         <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -161,7 +161,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-[#e78662]/10 py-8">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 flex items-center justify-between text-sm text-[#a3b8b0]">
-          <span className="font-heading font-semibold text-cream">LinkChat</span>
+          <span className="font-heading font-semibold text-cream">Linkas</span>
           <span>© {new Date().getFullYear()} — feito com ♥</span>
         </div>
       </footer>

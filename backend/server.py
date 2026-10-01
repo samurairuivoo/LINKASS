@@ -645,7 +645,7 @@ async def get_voice_signals(channel_id: str, user=Depends(get_current_user)):
 
 @api_router.get("/")
 async def root():
-    return {"message": "LinkChat API"}
+    return {"message": "Linkas API"}
 
 
 app.include_router(api_router)

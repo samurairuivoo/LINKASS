@@ -53,7 +53,7 @@ export default function AuthPage() {
             <div className="w-9 h-9 rounded-xl bg-[#e78662] flex items-center justify-center glow-coral">
               <Hash className="w-5 h-5 text-[#0c1411]" strokeWidth={3} />
             </div>
-            <span className="font-heading font-bold text-xl">LinkChat</span>
+            <span className="font-heading font-bold text-xl">Linkas</span>
           </div>
           <div>
             <h2 className="font-heading font-bold text-4xl leading-tight max-w-md">
@@ -71,7 +71,7 @@ export default function AuthPage() {
             <div className="w-9 h-9 rounded-xl bg-[#e78662] flex items-center justify-center">
               <Hash className="w-5 h-5 text-[#0c1411]" strokeWidth={3} />
             </div>
-            <span className="font-heading font-bold text-xl">LinkChat</span>
+            <span className="font-heading font-bold text-xl">Linkas</span>
           </div>
 
           <h1 className="font-heading font-bold text-3xl">{mode === "login" ? "Entrar" : "Criar conta"}</h1>
