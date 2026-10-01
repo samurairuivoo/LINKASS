@@ -1,0 +1,40 @@
+# LinkChat — PRD
+
+## Problem statement (original, PT)
+"preciso que seja feito verificaçao e deixe meu site bem criativo que chame atençao e oculpe 1 lugar no lugar do discord melhore a infraestrutura" — usuário quer um site criativo, que chame atenção, que ocupe o lugar do Discord, com infraestrutura melhor. Enviou um projeto zip (link-chat) em TypeScript/tRPC/drizzle.
+
+## Approach
+Rebuilt the Discord-competitor as a clean full-stack app on the Emergent stack (FastAPI + MongoDB + Vite/React 19), preserving the original brand palette (cream #f7f3ed, dark green #14231e, coral #e78662; fonts Space Grotesk + DM Sans).
+
+## Architecture
+- Backend: /app/backend/server.py — all routes under /api. Session-token auth (cookie + Bearer) for both email/password and Emergent Google OAuth.
+- Frontend: React Router; AuthContext; 3-column chat shell (ServerRail / ChannelSidebar / ChatArea / MemberList) + DM view. Real-time via 2.5s polling.
+- Collections: users, user_sessions, servers, channels, messages, dm_conversations, dm_messages.
+
+## User personas
+- Comunidades, grupos de amigos, criadores que querem um espaço próprio de chat em tempo real.
+
+## Core requirements (static)
+- Auth email/senha + Google; perfis com avatar/status; servidores + canais + convites; chat em tempo real; imagens/arquivos; DMs; lista de membros com presença; visual criativo mantendo a paleta.
+
+## Implemented (2026-06)
+- [x] Landing page criativa (hero, features bento, CTA)
+- [x] Auth email/senha + Google OAuth (Emergent) com split-screen
+- [x] Perfil (nome, avatar base64, status, presença online)
+- [x] Servidores: criar, listar, detalhe, convite por código, entrar
+- [x] Canais de texto (geral/random padrão + criar)
+- [x] Chat em tempo real (polling 2.5s) com anexos de imagem (base64)
+- [x] Mensagens diretas entre usuários
+- [x] Lista de membros com indicador online/offline
+- Tested: 19/19 backend pytest + Playwright E2E, 100% pass.
+
+## Backlog (prioritized)
+- P0: Chamadas de voz nos canais de voz (próxima fase — WebRTC/LiveKit).
+- P1: Reações e indicador "digitando..."; migrar anexos para object storage; índices Mongo.
+- P1: Edição/exclusão de mensagens; roles/permissões de servidor.
+- P2: Notificações, busca de mensagens, temas; WebSocket real-time em vez de polling.
+
+## Next tasks
+1. Voice channels (WebRTC) — explicitamente planejado para "logo em seguida".
+2. Typing indicator + reactions.
+3. Object storage migration for attachments.

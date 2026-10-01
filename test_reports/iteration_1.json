@@ -1,0 +1,29 @@
+{
+  "summary": "Full backend + frontend testing for LinkChat. 19/19 pytest backend tests pass covering auth (signup/login/me/duplicate/google-session errors), profile update + persistence, servers (create with default geral+random channels, list-mine-only, non-member 403, join by code / invalid 404, create channel), channel messages (post, fetch with author enrichment, base64 image, empty rejection), DMs (all-users list excludes self, send+read both sides, non-existent user 404). Frontend end-to-end verified via Playwright: landing hero renders and 'Entrar' navigates to /auth; signup via UI lands on /app; create-server modal creates server with default 'geral' and 'random' channels; message sent appears in chat; member shown online in sidebar; DM rail switches to DM view, user list loads, selecting a user and sending message works end-to-end.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AppShell toasts", "issues": ["Success toasts (e.g. 'Servidor criado!', 'Conta criada!') overlap with channel header area at top-center — low-impact but can briefly cover header title."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_linkchat_backend.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py uses `@app.on_event('shutdown')` which is deprecated in modern FastAPI — prefer lifespan context manager (minor).",
+    "`create_session` always sets cookie with secure=True + samesite='none' — correct for the HTTPS preview, but will not work on plain HTTP localhost dev.",
+    "No index on frequently-queried fields (users.email, user_sessions.session_token, messages.channel_id, servers.invite_code). Add Mongo indexes for scale.",
+    "Image attachments are stored as base64 inside Mongo documents — fine for MVP but will balloon doc size; migrate to object storage later.",
+    "Presence relies solely on last_seen updated inside get_current_user; a passive user with an open tab but no API traffic will appear offline after 45s. The 2.5s polling mitigates this, but consider explicit heartbeat usage in frontend."
+  ],
+  "updated_files": ["/app/backend/tests/test_linkchat_backend.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "alice@test.com / pass1234 (seeded in DB); signup accepts any new email.",
+  "seed_data_creation": "Tests create TEST_-prefixed users/servers (not cleaned up to allow retest reuse). alice@test.com present.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend pytest file at /app/backend/tests/test_linkchat_backend.py — uses pytest-xdist loadscope so each class is self-contained (TestMessages has its own msg_ctx fixture). Fresh user per module via _signup(). Google OAuth cannot be fully tested (needs real session id); only error paths tested. Real-time is polling-based (2.5s), so tests sleep ~1.5s after sending messages before asserting UI.",
+  "rca of the issue": "No bugs found; all requested features function correctly."
+}
