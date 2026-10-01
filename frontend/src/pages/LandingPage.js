@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
 
-const LOGO = "https://static.prod-images.emergentagent.com/jobs/0c481a4a-3ae7-4957-b32e-72e8a69fa3d7/images/6c20ccdc46109be57f2eed0733fc11a62d1757cfc9085c16204608fbecdff988.jpeg";
+const LOGO = "https://customer-assets-rejwkqb3.emergentagent.net/job_infra-boost-creative/artifacts/i1ukqrmu_5039610030247840874.jpg";
 
 function BrandMark({ size = 40 }) {
   return <img src={LOGO} alt="Linkas" className="rounded-xl object-cover shadow-[0_0_24px_rgba(35,152,255,.35)]" style={{ width: size, height: size }} />;

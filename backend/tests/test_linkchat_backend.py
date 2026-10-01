@@ -11,7 +11,7 @@ API = f"{BASE_URL}/api"
 def _signup(name=None, email=None, password="pass1234"):
     email = email or f"TEST_{uuid.uuid4().hex[:8]}@test.com"
     name = name or "Test User"
-    r = requests.post(f"{API}/auth/signup", json={"name": name, "email": email, "password": password})
+    r = requests.post(f"{API}/auth/signup", json={"name": name, "email": email, "password": password, "birth_date": "2000-01-01"})
     assert r.status_code == 200, r.text
     data = r.json()
     return data["token"], data["user"], email, password
@@ -54,7 +54,7 @@ class TestAuth:
         assert r.status_code == 401
 
     def test_signup_duplicate(self, user_a):
-        r = requests.post(f"{API}/auth/signup", json={"name": "x", "email": user_a["email"], "password": "pass1234"})
+        r = requests.post(f"{API}/auth/signup", json={"name": "x", "email": user_a["email"], "password": "pass1234", "birth_date": "2000-01-01"})
         assert r.status_code == 400
 
     def test_google_session_missing(self):

@@ -12,7 +12,7 @@ API = f"{BASE_URL}/api"
 
 def _signup(name="Test User"):
     email = f"TEST_{uuid.uuid4().hex[:8]}@test.com"
-    r = requests.post(f"{API}/auth/signup", json={"name": name, "email": email, "password": "pass1234"})
+    r = requests.post(f"{API}/auth/signup", json={"name": name, "email": email, "password": "pass1234", "birth_date": "2000-01-01"})
     assert r.status_code == 200, r.text
     d = r.json()
     return {"token": d["token"], "user": d["user"], "email": email,

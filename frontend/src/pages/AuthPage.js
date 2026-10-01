@@ -7,6 +7,7 @@ import api, { setToken } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
 const HERO_IMG = "https://images.unsplash.com/photo-1534156039819-c89418369a4f?crop=entropy&cs=srgb&fm=jpg&q=85&w=1000";
+const LOGO = "https://customer-assets-rejwkqb3.emergentagent.net/job_infra-boost-creative/artifacts/i1ukqrmu_5039610030247840874.jpg";
 
 export default function AuthPage() {
   const navigate = useNavigate();
@@ -50,9 +51,7 @@ export default function AuthPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-[#0a1228] via-[#0a1228]/70 to-[#0a1228]/60" />
         <div className="relative h-full flex flex-col justify-between p-12">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#19a9ff] flex items-center justify-center glow-coral">
-              <Hash className="w-5 h-5 text-[#0a1228]" strokeWidth={3} />
-            </div>
+            <img src={LOGO} alt="Linkas" className="w-9 h-9 rounded-xl object-cover glow-coral" />
             <span className="font-heading font-bold text-xl">Linkas</span>
           </div>
           <div>
@@ -68,9 +67,7 @@ export default function AuthPage() {
       <div className="flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <div className="w-9 h-9 rounded-xl bg-[#19a9ff] flex items-center justify-center">
-              <Hash className="w-5 h-5 text-[#0a1228]" strokeWidth={3} />
-            </div>
+            <img src={LOGO} alt="Linkas" className="w-9 h-9 rounded-xl object-cover" />
             <span className="font-heading font-bold text-xl">Linkas</span>
           </div>
 
