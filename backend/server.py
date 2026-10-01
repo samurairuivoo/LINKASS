@@ -600,6 +600,9 @@ async def voice_join(channel_id: str, user=Depends(get_current_user)):
     if not ch:
         raise HTTPException(status_code=404, detail="Canal não encontrado")
     await ensure_member(ch["server_id"], user)
+    current = await _voice_participants(channel_id)
+    if len(current) >= 10 and user["user_id"] not in [p["user_id"] for p in current]:
+        raise HTTPException(status_code=403, detail="Sala cheia (máximo de 10 participantes)")
     await db.voice_members.update_one(
         {"channel_id": channel_id, "user_id": user["user_id"]},
         {"$set": {"channel_id": channel_id, "user_id": user["user_id"], "name": user["name"],
@@ -698,6 +701,7 @@ async def create_checkout(req: CheckoutRequest, user=Depends(get_current_user)):
         mode="subscription" if price.recurring else "payment",
         success_url=f"{req.origin_url}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{req.origin_url}/payment/cancel",
+        locale="pt-BR",
         metadata={"user_id": user["user_id"], "lookup_key": req.lookup_key},
     )
     await db.payment_transactions.insert_one({

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Hash, Send, Paperclip, X, SmilePlus, FileText, Download } from "lucide-react";
+import { Hash, Send, Paperclip, X, SmilePlus, FileText, Download, Mic } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar } from "./Avatar";
 import api from "@/lib/api";
@@ -23,6 +23,11 @@ export default function ChatArea({ title, subtitle, messages, onSend, onReact, r
   const [sending, setSending] = useState(false);
   const [typingUsers, setTypingUsers] = useState([]);
   const [reactFor, setReactFor] = useState(null);
+  const [recording, setRecording] = useState(false);
+  const [recSecs, setRecSecs] = useState(0);
+  const mediaRec = useRef(null);
+  const recChunks = useRef([]);
+  const recTimer = useRef(null);
   const endRef = useRef(null);
   const fileRef = useRef(null);
   const lastTyping = useRef(0);
@@ -77,6 +82,40 @@ export default function ChatArea({ title, subtitle, messages, onSend, onReact, r
     try { await onReact?.(messageId, emoji); } catch {}
   };
 
+  const sendVoice = async (blob) => {
+    const file = new File([blob], `audio-${Date.now()}.webm`, { type: "audio/webm" });
+    const fd = new FormData(); fd.append("file", file);
+    try {
+      const res = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      await onSend({ content: "", file_url: res.data.url, file_name: "Mensagem de voz", file_type: "audio/webm" });
+    } catch { toast.error("Falha ao enviar áudio"); }
+  };
+
+  const startRec = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream);
+      recChunks.current = [];
+      mr.ondataavailable = (e) => { if (e.data.size) recChunks.current.push(e.data); };
+      mr.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop());
+        if (recTimer.current) clearInterval(recTimer.current);
+        setRecording(false); setRecSecs(0);
+        const blob = new Blob(recChunks.current, { type: "audio/webm" });
+        if (blob.size > 0) sendVoice(blob);
+      };
+      mediaRec.current = mr;
+      mr.start();
+      setRecording(true); setRecSecs(0);
+      recTimer.current = setInterval(() => setRecSecs((s) => s + 1), 1000);
+    } catch { toast.error("Não foi possível acessar o microfone"); }
+  };
+
+  const stopRec = (cancel) => {
+    if (cancel) recChunks.current = [];
+    try { mediaRec.current?.stop(); } catch {}
+  };
+
   return (
     <div className="flex-1 min-w-0 flex flex-col bg-[#0a1228]">
       <div className="h-14 px-5 flex items-center gap-2 border-b border-[#19a9ff]/10 backdrop-blur-xl bg-[#0a1228]/70">
@@ -121,7 +160,13 @@ export default function ChatArea({ title, subtitle, messages, onSend, onReact, r
                   {m.image && (
                     <img src={fileUrl(m.image)} alt={m.file_name || "imagem"} className="mt-2 max-w-xs sm:max-w-sm rounded-xl border border-[#19a9ff]/20" />
                   )}
-                  {m.file_url && !m.image && (
+                  {m.file_url && !m.image && (m.file_type || "").startsWith("video/") && (
+                    <video src={fileUrl(m.file_url)} controls data-testid="message-video" className="mt-2 max-w-xs sm:max-w-sm rounded-xl border border-[#19a9ff]/20" />
+                  )}
+                  {m.file_url && !m.image && (m.file_type || "").startsWith("audio/") && (
+                    <audio src={fileUrl(m.file_url)} controls data-testid="message-audio" className="mt-2 w-64 max-w-full" />
+                  )}
+                  {m.file_url && !m.image && !(m.file_type || "").startsWith("video/") && !(m.file_type || "").startsWith("audio/") && (
                     <a href={fileUrl(m.file_url)} target="_blank" rel="noreferrer" data-testid="message-file" className="mt-2 inline-flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#101a38] border border-[#19a9ff]/20 hover:border-[#19a9ff]/50 transition-colors max-w-xs">
                       <FileText className="w-5 h-5 text-[#19a9ff] shrink-0" />
                       <span className="text-sm text-cream truncate flex-1">{m.file_name || "arquivo"}</span>
@@ -180,24 +225,39 @@ export default function ChatArea({ title, subtitle, messages, onSend, onReact, r
       </div>
 
       <form onSubmit={send} className="px-4 pb-4 pt-1">
-        <div className="flex items-end gap-2 bg-[#101a38] border border-[#19a9ff]/15 rounded-2xl px-3 py-2 focus-within:border-[#19a9ff]/50 transition-colors">
-          <button type="button" data-testid="attach-image-button" disabled={uploading} onClick={() => fileRef.current?.click()} className="w-9 h-9 rounded-xl flex items-center justify-center text-[#93a4cc] hover:text-[#19a9ff] hover:bg-[#17264b] transition-colors disabled:opacity-50">
-            {uploading ? <span className="w-4 h-4 rounded-full border-2 border-[#19a9ff] border-t-transparent animate-spin" /> : <Paperclip className="w-5 h-5" />}
-          </button>
-          <input ref={fileRef} type="file" hidden onChange={pickFile} data-testid="file-input" />
-          <textarea
-            data-testid="message-input"
-            rows={1}
-            value={text}
-            onChange={(e) => { setText(e.target.value); emitTyping(); }}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            placeholder={placeholder || "Mensagem..."}
-            className="flex-1 bg-transparent resize-none outline-none text-cream placeholder:text-[#64748b] py-1.5 max-h-32"
-          />
-          <button type="submit" data-testid="send-message-button" disabled={sending || uploading || (!text.trim() && !attachment)} className="w-9 h-9 rounded-xl bg-[#19a9ff] text-[#0a1228] flex items-center justify-center disabled:opacity-40 hover:-translate-y-0.5 active:scale-95 transition-transform">
-            <Send className="w-4 h-4" />
-          </button>
-        </div>
+        {recording ? (
+          <div className="flex items-center gap-3 bg-[#101a38] border border-[#f43f5e]/40 rounded-2xl px-4 py-3" data-testid="recording-bar">
+            <span className="w-3 h-3 rounded-full bg-[#f43f5e] animate-pulse" />
+            <span className="text-sm text-cream">Gravando áudio... {String(Math.floor(recSecs / 60)).padStart(2, "0")}:{String(recSecs % 60).padStart(2, "0")}</span>
+            <button type="button" data-testid="cancel-recording-button" onClick={() => stopRec(true)} className="ml-auto px-3 h-8 rounded-lg text-sm text-[#93a4cc] hover:text-cream">Cancelar</button>
+            <button type="button" data-testid="send-recording-button" onClick={() => stopRec(false)} className="w-9 h-9 rounded-xl bg-[#19a9ff] text-[#0a1228] flex items-center justify-center hover:-translate-y-0.5 transition-transform"><Send className="w-4 h-4" /></button>
+          </div>
+        ) : (
+          <div className="flex items-end gap-2 bg-[#101a38] border border-[#19a9ff]/15 rounded-2xl px-3 py-2 focus-within:border-[#19a9ff]/50 transition-colors">
+            <button type="button" data-testid="attach-image-button" disabled={uploading} onClick={() => fileRef.current?.click()} className="w-9 h-9 rounded-xl flex items-center justify-center text-[#93a4cc] hover:text-[#19a9ff] hover:bg-[#17264b] transition-colors disabled:opacity-50">
+              {uploading ? <span className="w-4 h-4 rounded-full border-2 border-[#19a9ff] border-t-transparent animate-spin" /> : <Paperclip className="w-5 h-5" />}
+            </button>
+            <input ref={fileRef} type="file" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip" hidden onChange={pickFile} data-testid="file-input" />
+            <textarea
+              data-testid="message-input"
+              rows={1}
+              value={text}
+              onChange={(e) => { setText(e.target.value); emitTyping(); }}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+              placeholder={placeholder || "Mensagem..."}
+              className="flex-1 bg-transparent resize-none outline-none text-cream placeholder:text-[#64748b] py-1.5 max-h-32"
+            />
+            {!text.trim() && !attachment ? (
+              <button type="button" data-testid="record-audio-button" onClick={startRec} title="Gravar mensagem de voz" className="w-9 h-9 rounded-xl flex items-center justify-center text-[#93a4cc] hover:text-[#19a9ff] hover:bg-[#17264b] transition-colors">
+                <Mic className="w-5 h-5" />
+              </button>
+            ) : (
+              <button type="submit" data-testid="send-message-button" disabled={sending || uploading} className="w-9 h-9 rounded-xl bg-[#19a9ff] text-[#0a1228] flex items-center justify-center disabled:opacity-40 hover:-translate-y-0.5 active:scale-95 transition-transform">
+                <Send className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
       </form>
     </div>
   );
