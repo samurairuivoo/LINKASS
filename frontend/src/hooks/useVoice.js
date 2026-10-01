@@ -8,6 +8,9 @@ export function useVoice(channelId, user) {
   const [joined, setJoined] = useState(false);
   const [participants, setParticipants] = useState([]);
   const [muted, setMuted] = useState(false);
+  const [videoOn, setVideoOn] = useState(false);
+  const [hasVideo, setHasVideo] = useState(false);
+  const [localStreamState, setLocalStreamState] = useState(null);
   const [remoteStreams, setRemoteStreams] = useState({}); // userId -> MediaStream
 
   const localStream = useRef(null);
@@ -86,8 +89,17 @@ export function useVoice(channelId, user) {
 
   const join = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        stream.getVideoTracks().forEach((t) => (t.enabled = false));
+        setHasVideo(true);
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        setHasVideo(false);
+      }
       localStream.current = stream;
+      setLocalStreamState(stream);
       joinedRef.current = true;
       setJoined(true);
       await tick();
@@ -115,8 +127,13 @@ export function useVoice(channelId, user) {
     if (track) { track.enabled = !track.enabled; setMuted(!track.enabled); }
   }, []);
 
+  const toggleVideo = useCallback(() => {
+    const vt = localStream.current?.getVideoTracks()?.[0];
+    if (vt) { vt.enabled = !vt.enabled; setVideoOn(vt.enabled); }
+  }, []);
+
   // cleanup on unmount
   useEffect(() => () => { joinedRef.current = false; if (pollRef.current) clearInterval(pollRef.current); Object.values(peers.current).forEach((pc) => { try { pc.close(); } catch {} }); localStream.current?.getTracks().forEach((t) => t.stop()); }, []);
 
-  return { joined, participants, muted, remoteStreams, join, leave, toggleMute };
+  return { joined, participants, muted, videoOn, hasVideo, localStream: localStreamState, remoteStreams, join, leave, toggleMute, toggleVideo };
 }

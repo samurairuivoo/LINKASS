@@ -1,21 +1,32 @@
 import { useEffect, useRef } from "react";
-import { Volume2, Mic, MicOff, PhoneOff } from "lucide-react";
+import { Volume2, Mic, MicOff, PhoneOff, Video, VideoOff } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar } from "./Avatar";
 import { useVoice } from "@/hooks/useVoice";
 
-function RemoteAudio({ stream }) {
+function MediaTile({ stream, muted, name, you }) {
   const ref = useRef(null);
   useEffect(() => { if (ref.current) ref.current.srcObject = stream; }, [stream]);
-  return <audio ref={ref} autoPlay playsInline />;
+  const hasVideo = stream && stream.getVideoTracks().some((t) => t.enabled && t.readyState === "live");
+  return (
+    <div data-testid={`voice-tile-${name}`} className="relative w-56 h-40 rounded-2xl overflow-hidden bg-[#101a38] border border-[#19a9ff]/20 flex items-center justify-center">
+      <video ref={ref} autoPlay playsInline muted={muted} className={`absolute inset-0 w-full h-full object-cover ${hasVideo ? "" : "hidden"}`} />
+      {!hasVideo && (
+        <div className="flex flex-col items-center gap-2">
+          <div className="p-1 rounded-full border-2 border-[#22c55e]/60"><Avatar user={{ name }} size={56} /></div>
+        </div>
+      )}
+      <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/50 text-xs text-white">{name}{you ? " (você)" : ""}</span>
+    </div>
+  );
 }
 
 export default function VoiceRoom({ channel, user }) {
-  const { joined, participants, muted, remoteStreams, join, leave, toggleMute } = useVoice(channel.channel_id, user);
+  const { joined, participants, muted, videoOn, hasVideo, localStream, remoteStreams, join, leave, toggleMute, toggleVideo } = useVoice(channel.channel_id, user);
 
   const doJoin = async () => {
     const ok = await join();
-    if (!ok) toast.error("Não foi possível acessar o microfone. Permita o acesso ao microfone.");
+    if (!ok) toast.error("Não foi possível acessar microfone/câmera. Permita o acesso.");
   };
 
   return (
@@ -23,7 +34,7 @@ export default function VoiceRoom({ channel, user }) {
       <div className="h-14 px-5 flex items-center gap-2 border-b border-[#19a9ff]/10">
         <Volume2 className="w-5 h-5 text-[#93a4cc]" />
         <span className="font-heading font-semibold" data-testid="voice-title">{channel.name}</span>
-        <span className="text-sm text-[#93a4cc] ml-2 hidden sm:inline">canal de voz</span>
+        <span className="text-sm text-[#93a4cc] ml-2 hidden sm:inline">canal de voz e vídeo</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
@@ -31,26 +42,16 @@ export default function VoiceRoom({ channel, user }) {
           <div className="h-full flex flex-col items-center justify-center text-center">
             <div className="w-16 h-16 rounded-2xl bg-[#101a38] flex items-center justify-center mb-4"><Volume2 className="w-7 h-7 text-[#19a9ff]" /></div>
             <p className="font-heading font-semibold text-cream text-lg">Ninguém na chamada ainda</p>
-            <p className="text-sm text-[#93a4cc] mt-1">Entre para começar a conversar por voz ao vivo.</p>
+            <p className="text-sm text-[#93a4cc] mt-1">Entre para conversar por voz e vídeo ao vivo.</p>
           </div>
         )}
-        <div className="flex flex-wrap gap-6 justify-center">
-          {participants.map((p) => {
-            const you = p.user_id === user.user_id;
-            const talking = you ? !muted : true;
-            return (
-              <div key={p.user_id} data-testid={`voice-participant-${p.user_id}`} className="flex flex-col items-center gap-2">
-                <div className={`p-1 rounded-full border-2 transition-colors ${talking ? "border-[#22c55e]/70 shadow-[0_0_20px_rgba(34,197,94,0.3)]" : "border-[#64748b]/40"}`}>
-                  <Avatar user={p} size={76} />
-                </div>
-                <span className="text-sm font-medium text-cream">{p.name}{you ? " (você)" : ""}</span>
-              </div>
-            );
-          })}
+        <div className="flex flex-wrap gap-5 justify-center">
+          {joined && <MediaTile stream={localStream} muted name={user.name} you />}
+          {participants.filter((p) => p.user_id !== user.user_id).map((p) => (
+            <MediaTile key={p.user_id} stream={remoteStreams[p.user_id]} muted={false} name={p.name} />
+          ))}
         </div>
       </div>
-
-      {Object.entries(remoteStreams).map(([uid, stream]) => <RemoteAudio key={uid} stream={stream} />)}
 
       <div className="p-4 flex items-center justify-center gap-3 border-t border-[#19a9ff]/10">
         {!joined ? (
@@ -62,6 +63,11 @@ export default function VoiceRoom({ channel, user }) {
             <button data-testid="voice-mute-button" onClick={toggleMute} title={muted ? "Ativar microfone" : "Silenciar"} className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${muted ? "bg-[#f43f5e] text-white" : "bg-[#17264b] text-cream hover:bg-[#22407a]"}`}>
               {muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
+            {hasVideo && (
+              <button data-testid="voice-video-button" onClick={toggleVideo} title={videoOn ? "Desligar câmera" : "Ligar câmera"} className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${videoOn ? "bg-[#19a9ff] text-[#0a1228]" : "bg-[#17264b] text-cream hover:bg-[#22407a]"}`}>
+                {videoOn ? <Video className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+              </button>
+            )}
             <button data-testid="voice-leave-button" onClick={leave} title="Sair da chamada" className="w-12 h-12 rounded-full bg-[#f43f5e] text-white flex items-center justify-center hover:-translate-y-0.5 transition-transform">
               <PhoneOff className="w-5 h-5" />
             </button>

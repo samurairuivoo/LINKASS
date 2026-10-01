@@ -8,6 +8,7 @@ import LandingPage from "@/pages/LandingPage";
 import AuthPage from "@/pages/AuthPage";
 import AppShell from "@/pages/AppShell";
 import InvitePage from "@/pages/InvitePage";
+import PaymentResult from "@/pages/PaymentResult";
 import AgeGate from "@/components/AgeGate";
 
 // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
@@ -62,6 +63,8 @@ function AppRouter() {
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/app" element={<Protected><AppShell /></Protected>} />
       <Route path="/invite/:code" element={<InvitePage />} />
+      <Route path="/payment/success" element={<PaymentResult />} />
+      <Route path="/payment/cancel" element={<PaymentResult cancel />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

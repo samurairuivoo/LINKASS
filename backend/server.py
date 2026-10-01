@@ -9,6 +9,7 @@ import uuid
 import bcrypt
 import httpx
 import requests
+import stripe
 from pathlib import Path
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
@@ -86,6 +87,7 @@ class SignupInput(BaseModel):
     name: str
     email: EmailStr
     password: str
+    birth_date: str
 
 
 class LoginInput(BaseModel):
@@ -136,6 +138,20 @@ def now_utc():
 
 def new_id(prefix):
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
+
+
+def age_from_birthdate(value):
+    try:
+        b = datetime.fromisoformat(value)
+    except Exception:
+        return None
+    if b.tzinfo is None:
+        b = b.replace(tzinfo=timezone.utc)
+    now = now_utc()
+    if b > now:
+        return None
+    age = now.year - b.year - ((now.month, now.day) < (b.month, b.day))
+    return age if 0 <= age <= 120 else None
 
 
 def hash_pw(pw: str) -> str:
@@ -213,6 +229,9 @@ async def get_current_user(request: Request):
 # ----------------------------- Auth routes -----------------------------
 @api_router.post("/auth/signup")
 async def signup(data: SignupInput, response: Response):
+    age = age_from_birthdate(data.birth_date)
+    if age is None or age < 13:
+        raise HTTPException(status_code=400, detail="O Linkas está disponível apenas para pessoas com 13 anos ou mais.")
     existing = await db.users.find_one({"email": data.email.lower()})
     if existing:
         raise HTTPException(status_code=400, detail="E-mail já cadastrado")
@@ -222,6 +241,8 @@ async def signup(data: SignupInput, response: Response):
         "name": data.name,
         "email": data.email.lower(),
         "password_hash": hash_pw(data.password),
+        "birth_date": data.birth_date,
+        "age": age,
         "picture": None,
         "status": "",
         "provider": "email",
@@ -646,6 +667,93 @@ async def get_voice_signals(channel_id: str, user=Depends(get_current_user)):
 @api_router.get("/")
 async def root():
     return {"message": "Linkas API"}
+
+
+# ----------------------------- Stripe payments -----------------------------
+stripe.api_key = os.environ.get("STRIPE_SECRET_KEY") or "sk_test_emergent"
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+
+
+class CheckoutRequest(BaseModel):
+    lookup_key: str
+    origin_url: str
+
+
+@api_router.get("/plans")
+async def list_plans():
+    return {
+        "pro": {"monthly": "pro_monthly", "yearly": "pro_yearly"},
+        "community": {"monthly": "community_monthly", "yearly": "community_yearly"},
+    }
+
+
+@api_router.post("/payments/checkout")
+async def create_checkout(req: CheckoutRequest, user=Depends(get_current_user)):
+    prices = stripe.Price.list(lookup_keys=[req.lookup_key], active=True, limit=1).data
+    if not prices:
+        raise HTTPException(status_code=400, detail=f"Plano não encontrado: {req.lookup_key}")
+    price = prices[0]
+    session = stripe.checkout.Session.create(
+        line_items=[{"price": price.id, "quantity": 1}],
+        mode="subscription" if price.recurring else "payment",
+        success_url=f"{req.origin_url}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{req.origin_url}/payment/cancel",
+        metadata={"user_id": user["user_id"], "lookup_key": req.lookup_key},
+    )
+    await db.payment_transactions.insert_one({
+        "session_id": session.id, "user_id": user["user_id"], "lookup_key": req.lookup_key,
+        "amount": (price.unit_amount or 0) / 100, "currency": price.currency,
+        "status": "initiated", "payment_status": "pending",
+        "created_at": now_utc().isoformat(), "updated_at": now_utc().isoformat(),
+    })
+    return {"checkout_url": session.url, "session_id": session.id}
+
+
+@api_router.get("/payments/status/{session_id}")
+async def payment_status(session_id: str):
+    record = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="Transação não encontrada")
+    if record.get("payment_status") != "paid":
+        try:
+            s = stripe.checkout.Session.retrieve(session_id)
+            if s.payment_status == "paid" or s.status == "complete":
+                await db.payment_transactions.update_one(
+                    {"session_id": session_id, "payment_status": {"$ne": "paid"}},
+                    {"$set": {"status": "completed", "payment_status": "paid",
+                              "stripe_subscription_id": s.subscription,
+                              "updated_at": now_utc().isoformat()}},
+                )
+                if record.get("user_id"):
+                    await db.users.update_one({"user_id": record["user_id"]},
+                        {"$set": {"plan": record["lookup_key"]}})
+                record = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+        except Exception:
+            pass
+    return {"session_id": record["session_id"], "status": record["status"],
+            "payment_status": record["payment_status"], "lookup_key": record.get("lookup_key")}
+
+
+@api_router.post("/stripe/webhook")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    sig = request.headers.get("stripe-signature", "")
+    try:
+        event = stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid signature")
+    obj, t = event["data"]["object"], event["type"]
+    if t == "checkout.session.completed":
+        await db.payment_transactions.update_one(
+            {"session_id": obj["id"], "payment_status": {"$ne": "paid"}},
+            {"$set": {"status": "completed", "payment_status": obj.get("payment_status", "paid"),
+                      "stripe_subscription_id": obj.get("subscription"),
+                      "updated_at": now_utc().isoformat()}},
+        )
+        meta = obj.get("metadata") or {}
+        if meta.get("user_id"):
+            await db.users.update_one({"user_id": meta["user_id"]}, {"$set": {"plan": meta.get("lookup_key")}})
+    return {"status": "ok"}
 
 
 app.include_router(api_router)

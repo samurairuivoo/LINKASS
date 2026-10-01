@@ -12,7 +12,7 @@ export default function AuthPage() {
   const navigate = useNavigate();
   const { user, loginWithToken } = useAuth();
   const [mode, setMode] = useState("login");
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", birthDate: "" });
   const [busy, setBusy] = useState(false);
 
   useEffect(() => { if (user) navigate("/app", { replace: true }); }, [user, navigate]);
@@ -24,7 +24,7 @@ export default function AuthPage() {
       const path = mode === "login" ? "/auth/login" : "/auth/signup";
       const payload = mode === "login"
         ? { email: form.email, password: form.password }
-        : form;
+        : { name: form.name, email: form.email, password: form.password, birth_date: form.birthDate };
       const res = await api.post(path, payload);
       loginWithToken(res.data.token, res.data.user);
       toast.success(mode === "login" ? "Bem-vindo de volta!" : "Conta criada!");
@@ -100,6 +100,11 @@ export default function AuthPage() {
                 >
                   <Field icon={User} placeholder="Seu nome" value={form.name}
                     onChange={(v) => setForm({ ...form, name: v })} testid="signup-name-input" />
+                  <label className="mt-3 block text-xs font-semibold text-[#93a4cc]">Data de nascimento (13+)
+                    <input type="date" data-testid="signup-birthdate-input" value={form.birthDate}
+                      onChange={(e) => setForm({ ...form, birthDate: e.target.value })} required={mode === "signup"}
+                      className="mt-1 w-full h-11 px-3 rounded-xl bg-[#101a38] border border-[#19a9ff]/15 text-cream outline-none focus:border-[#19a9ff]/50" />
+                  </label>
                 </motion.div>
               )}
             </AnimatePresence>

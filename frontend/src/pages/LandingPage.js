@@ -5,14 +5,13 @@ import {
   Menu, MessageCircle, MessageSquare, Send, Share2, ShieldCheck, Sparkles, UsersRound, X,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import api from "@/lib/api";
+import { toast } from "sonner";
+
+const LOGO = "https://static.prod-images.emergentagent.com/jobs/0c481a4a-3ae7-4957-b32e-72e8a69fa3d7/images/6c20ccdc46109be57f2eed0733fc11a62d1757cfc9085c16204608fbecdff988.jpeg";
 
 function BrandMark({ size = 40 }) {
-  return (
-    <div className="grid place-items-center rounded-xl bg-gradient-to-br from-[#5948ff] via-[#2a7bff] to-[#19a9ff] shadow-[0_0_24px_rgba(35,152,255,.35)]"
-      style={{ width: size, height: size }}>
-      <Link2 className="text-white" style={{ width: size * 0.52, height: size * 0.52 }} />
-    </div>
-  );
+  return <img src={LOGO} alt="Linkas" className="rounded-xl object-cover shadow-[0_0_24px_rgba(35,152,255,.35)]" style={{ width: size, height: size }} />;
 }
 
 function PhoneShowcase() {
@@ -91,6 +90,15 @@ export default function LandingPage() {
 
   useEffect(() => { document.title = "Linkas — Conecte-se através de um link"; }, []);
   const go = () => navigate(user ? "/app" : "/auth");
+  const subscribe = async (plan) => {
+    if (plan.id === "free") { go(); return; }
+    if (!user) { navigate("/auth"); return; }
+    const lookup = `${plan.id}_${billing === "month" ? "monthly" : "yearly"}`;
+    try {
+      const res = await api.post("/payments/checkout", { lookup_key: lookup, origin_url: window.location.origin });
+      window.location.href = res.data.checkout_url;
+    } catch { toast.error("Não foi possível iniciar o pagamento"); }
+  };
   const faqs = [
     ["Preciso instalar alguma coisa?", "Não. Você pode começar pelo navegador e acessar suas conversas de onde estiver."],
     ["Posso criar grupos?", "Sim. Crie grupos e servidores, compartilhe um link e organize cada conversa separadamente."],
@@ -228,7 +236,7 @@ export default function LandingPage() {
                       <li key={perk} className="flex items-start gap-2 text-sm text-blue-100/75"><Check size={16} className="mt-0.5 shrink-0 text-cyan-300" /> {perk}</li>
                     ))}
                   </ul>
-                  <button onClick={go} data-testid={`plan-cta-${plan.id}`} className={`mt-7 h-12 rounded-2xl text-sm font-bold transition-all ${plan.highlight ? "bg-gradient-to-r from-[#5948ff] to-[#19a9ff] text-white hover:brightness-110" : "border border-white/15 text-white hover:bg-white/5"}`}>
+                  <button onClick={() => subscribe(plan)} data-testid={`plan-cta-${plan.id}`} className={`mt-7 h-12 rounded-2xl text-sm font-bold transition-all ${plan.highlight ? "bg-gradient-to-r from-[#5948ff] to-[#19a9ff] text-white hover:brightness-110" : "border border-white/15 text-white hover:bg-white/5"}`}>
                     {plan.month === 0 ? "Começar grátis" : "Assinar " + plan.name}
                   </button>
                 </div>
