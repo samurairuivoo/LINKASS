@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { MessageSquare, Server, Home } from "lucide-react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import ServerRail from "@/components/chat/ServerRail";
@@ -11,6 +13,7 @@ import { CreateServerModal, CreateChannelModal, ProfileModal } from "@/component
 
 export default function AppShell() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [view, setView] = useState("dm"); // dm | server
   const [servers, setServers] = useState([]);
   const [activeServer, setActiveServer] = useState(null);
@@ -92,7 +95,25 @@ export default function AppShell() {
   };
 
   return (
-    <div className="h-screen w-screen flex overflow-hidden bg-[#0c1411] text-cream">
+    <div className="h-screen w-screen flex flex-col overflow-hidden bg-[#0a1228] text-cream">
+      {/* Barra fixa: alterna entre Conversas e Servidores, com voltar ao site */}
+      <div className="h-12 shrink-0 flex items-center gap-2 px-3 border-b border-[#19a9ff]/15 bg-[#060c1e]">
+        <button data-testid="topbar-home-button" onClick={() => navigate("/")} title="Voltar ao site" className="flex items-center gap-1.5 px-3 h-8 rounded-lg text-sm text-[#93a4cc] hover:text-cream hover:bg-[#101a38] transition-colors">
+          <Home className="w-4 h-4" /> <span className="hidden sm:inline">Voltar</span>
+        </button>
+        <div className="w-px h-6 bg-[#19a9ff]/15" />
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-[#101a38]">
+          <button data-testid="topbar-conversas" onClick={() => setView("dm")} className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-sm font-semibold transition-colors ${view === "dm" ? "bg-gradient-to-r from-[#5948ff] to-[#19a9ff] text-white" : "text-[#93a4cc] hover:text-cream"}`}>
+            <MessageSquare className="w-4 h-4" /> Conversas
+          </button>
+          <button data-testid="topbar-servidores" onClick={() => { if (servers[0]) openServer(servers[0]); else setModal("create-server"); }} className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-sm font-semibold transition-colors ${view === "server" ? "bg-gradient-to-r from-[#5948ff] to-[#19a9ff] text-white" : "text-[#93a4cc] hover:text-cream"}`}>
+            <Server className="w-4 h-4" /> Servidores
+          </button>
+        </div>
+        <span className="ml-auto font-heading font-bold text-sm tracking-tight text-cream/90">Linkas</span>
+      </div>
+
+      <div className="flex-1 flex overflow-hidden min-h-0">
       <ServerRail
         servers={servers}
         activeServer={activeServer}
@@ -130,6 +151,7 @@ export default function AppShell() {
           <MemberList members={members} />
         </>
       ) : null}
+      </div>
 
       {modal === "create-server" && <CreateServerModal onClose={() => setModal(null)} onCreated={onServerCreated} />}
       {modal === "create-channel" && activeServer && (

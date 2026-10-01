@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import "@/App.css";
@@ -8,6 +8,7 @@ import LandingPage from "@/pages/LandingPage";
 import AuthPage from "@/pages/AuthPage";
 import AppShell from "@/pages/AppShell";
 import InvitePage from "@/pages/InvitePage";
+import AgeGate from "@/components/AgeGate";
 
 // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
 function AuthCallback() {
@@ -30,10 +31,10 @@ function AuthCallback() {
     })();
   }, [navigate, setUser]);
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0c1411] text-cream">
+    <div className="min-h-screen flex items-center justify-center bg-[#0a1228] text-cream">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 rounded-full border-2 border-[#e78662] border-t-transparent animate-spin" />
-        <p className="text-[#a3b8b0]">Entrando...</p>
+        <div className="w-12 h-12 rounded-full border-2 border-[#19a9ff] border-t-transparent animate-spin" />
+        <p className="text-[#93a4cc]">Entrando...</p>
       </div>
     </div>
   );
@@ -43,8 +44,8 @@ function Protected({ children }) {
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0c1411]">
-        <div className="w-10 h-10 rounded-full border-2 border-[#e78662] border-t-transparent animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-[#0a1228]">
+        <div className="w-10 h-10 rounded-full border-2 border-[#19a9ff] border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -67,12 +68,14 @@ function AppRouter() {
 }
 
 export default function App() {
+  const [ageOk, setAgeOk] = useState(() => localStorage.getItem("lc_age_verified") === "1");
   return (
     <div className="App">
       <BrowserRouter>
         <AuthProvider>
           <Toaster position="bottom-right" theme="dark" richColors />
-          <AppRouter />
+          {!ageOk && <AgeGate onVerified={() => setAgeOk(true)} />}
+          {ageOk && <AppRouter />}
         </AuthProvider>
       </BrowserRouter>
     </div>

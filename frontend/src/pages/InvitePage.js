@@ -30,10 +30,10 @@ export default function InvitePage() {
   }, [user, loading, code, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0c1411] text-cream">
+    <div className="min-h-screen flex items-center justify-center bg-[#0a1228] text-cream">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 rounded-full border-2 border-[#e78662] border-t-transparent animate-spin" />
-        <p className="text-[#a3b8b0]">Entrando no servidor...</p>
+        <div className="w-12 h-12 rounded-full border-2 border-[#19a9ff] border-t-transparent animate-spin" />
+        <p className="text-[#93a4cc]">Entrando no servidor...</p>
       </div>
     </div>
   );

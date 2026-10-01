@@ -19,19 +19,19 @@ export default function VoiceRoom({ channel, user }) {
   };
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col bg-[#0c1411]">
-      <div className="h-14 px-5 flex items-center gap-2 border-b border-[#e78662]/10">
-        <Volume2 className="w-5 h-5 text-[#a3b8b0]" />
+    <div className="flex-1 min-w-0 flex flex-col bg-[#0a1228]">
+      <div className="h-14 px-5 flex items-center gap-2 border-b border-[#19a9ff]/10">
+        <Volume2 className="w-5 h-5 text-[#93a4cc]" />
         <span className="font-heading font-semibold" data-testid="voice-title">{channel.name}</span>
-        <span className="text-sm text-[#a3b8b0] ml-2 hidden sm:inline">canal de voz</span>
+        <span className="text-sm text-[#93a4cc] ml-2 hidden sm:inline">canal de voz</span>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
         {participants.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 rounded-2xl bg-[#121e1a] flex items-center justify-center mb-4"><Volume2 className="w-7 h-7 text-[#e78662]" /></div>
+            <div className="w-16 h-16 rounded-2xl bg-[#101a38] flex items-center justify-center mb-4"><Volume2 className="w-7 h-7 text-[#19a9ff]" /></div>
             <p className="font-heading font-semibold text-cream text-lg">Ninguém na chamada ainda</p>
-            <p className="text-sm text-[#a3b8b0] mt-1">Entre para começar a conversar por voz ao vivo.</p>
+            <p className="text-sm text-[#93a4cc] mt-1">Entre para começar a conversar por voz ao vivo.</p>
           </div>
         )}
         <div className="flex flex-wrap gap-6 justify-center">
@@ -52,14 +52,14 @@ export default function VoiceRoom({ channel, user }) {
 
       {Object.entries(remoteStreams).map(([uid, stream]) => <RemoteAudio key={uid} stream={stream} />)}
 
-      <div className="p-4 flex items-center justify-center gap-3 border-t border-[#e78662]/10">
+      <div className="p-4 flex items-center justify-center gap-3 border-t border-[#19a9ff]/10">
         {!joined ? (
-          <button data-testid="voice-join-button" onClick={doJoin} className="px-8 py-3 rounded-full bg-[#22c55e] text-[#0c1411] font-semibold flex items-center gap-2 hover:-translate-y-0.5 active:scale-[0.98] transition-transform">
+          <button data-testid="voice-join-button" onClick={doJoin} className="px-8 py-3 rounded-full bg-[#22c55e] text-[#0a1228] font-semibold flex items-center gap-2 hover:-translate-y-0.5 active:scale-[0.98] transition-transform">
             <Mic className="w-5 h-5" /> Entrar na chamada
           </button>
         ) : (
           <>
-            <button data-testid="voice-mute-button" onClick={toggleMute} title={muted ? "Ativar microfone" : "Silenciar"} className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${muted ? "bg-[#f43f5e] text-white" : "bg-[#1a2a25] text-cream hover:bg-[#26413a]"}`}>
+            <button data-testid="voice-mute-button" onClick={toggleMute} title={muted ? "Ativar microfone" : "Silenciar"} className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${muted ? "bg-[#f43f5e] text-white" : "bg-[#17264b] text-cream hover:bg-[#22407a]"}`}>
               {muted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
             </button>
             <button data-testid="voice-leave-button" onClick={leave} title="Sair da chamada" className="w-12 h-12 rounded-full bg-[#f43f5e] text-white flex items-center justify-center hover:-translate-y-0.5 transition-transform">

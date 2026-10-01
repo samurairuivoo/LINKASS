@@ -43,23 +43,23 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0c1411] text-cream grid lg:grid-cols-2">
+    <div className="min-h-screen bg-[#0a1228] text-cream grid lg:grid-cols-2">
       {/* Left ambient */}
       <div className="relative hidden lg:block grid-bg">
         <img src={HERO_IMG} alt="" className="absolute inset-0 w-full h-full object-cover opacity-30" />
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0c1411] via-[#0c1411]/70 to-[#14231e]/60" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0a1228] via-[#0a1228]/70 to-[#0a1228]/60" />
         <div className="relative h-full flex flex-col justify-between p-12">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#e78662] flex items-center justify-center glow-coral">
-              <Hash className="w-5 h-5 text-[#0c1411]" strokeWidth={3} />
+            <div className="w-9 h-9 rounded-xl bg-[#19a9ff] flex items-center justify-center glow-coral">
+              <Hash className="w-5 h-5 text-[#0a1228]" strokeWidth={3} />
             </div>
             <span className="font-heading font-bold text-xl">Linkas</span>
           </div>
           <div>
             <h2 className="font-heading font-bold text-4xl leading-tight max-w-md">
-              Sua comunidade merece um lugar <span className="text-[#e78662]">de verdade</span>.
+              Sua comunidade merece um lugar <span className="text-[#19a9ff]">de verdade</span>.
             </h2>
-            <p className="mt-4 text-[#a3b8b0] max-w-sm">Entre e comece a conversar em tempo real com quem importa.</p>
+            <p className="mt-4 text-[#93a4cc] max-w-sm">Entre e comece a conversar em tempo real com quem importa.</p>
           </div>
         </div>
       </div>
@@ -68,28 +68,28 @@ export default function AuthPage() {
       <div className="flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <div className="w-9 h-9 rounded-xl bg-[#e78662] flex items-center justify-center">
-              <Hash className="w-5 h-5 text-[#0c1411]" strokeWidth={3} />
+            <div className="w-9 h-9 rounded-xl bg-[#19a9ff] flex items-center justify-center">
+              <Hash className="w-5 h-5 text-[#0a1228]" strokeWidth={3} />
             </div>
             <span className="font-heading font-bold text-xl">Linkas</span>
           </div>
 
           <h1 className="font-heading font-bold text-3xl">{mode === "login" ? "Entrar" : "Criar conta"}</h1>
-          <p className="mt-2 text-[#a3b8b0] text-sm">
+          <p className="mt-2 text-[#93a4cc] text-sm">
             {mode === "login" ? "Que bom te ver de novo." : "Leva menos de um minuto."}
           </p>
 
           <button
             data-testid="google-login-button"
             onClick={googleLogin}
-            className="mt-6 w-full h-11 rounded-xl bg-cream text-[#14231e] font-semibold flex items-center justify-center gap-2.5 hover:-translate-y-0.5 active:scale-[0.98] transition-transform"
+            className="mt-6 w-full h-11 rounded-xl bg-cream text-[#0a1228] font-semibold flex items-center justify-center gap-2.5 hover:-translate-y-0.5 active:scale-[0.98] transition-transform"
           >
             <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="" className="w-5 h-5" />
             Continuar com Google
           </button>
 
-          <div className="my-5 flex items-center gap-3 text-xs text-[#a3b8b0]">
-            <div className="flex-1 h-px bg-[#e78662]/15" /> ou <div className="flex-1 h-px bg-[#e78662]/15" />
+          <div className="my-5 flex items-center gap-3 text-xs text-[#93a4cc]">
+            <div className="flex-1 h-px bg-[#19a9ff]/15" /> ou <div className="flex-1 h-px bg-[#19a9ff]/15" />
           </div>
 
           <form onSubmit={submit} className="space-y-3">
@@ -111,19 +111,19 @@ export default function AuthPage() {
             <button
               data-testid="auth-submit-button"
               disabled={busy}
-              className="w-full h-11 rounded-xl bg-[#e78662] text-[#0c1411] font-semibold flex items-center justify-center gap-2 hover:-translate-y-0.5 active:scale-[0.98] transition-transform disabled:opacity-60 glow-coral"
+              className="w-full h-11 rounded-xl bg-[#19a9ff] text-[#0a1228] font-semibold flex items-center justify-center gap-2 hover:-translate-y-0.5 active:scale-[0.98] transition-transform disabled:opacity-60 glow-coral"
             >
               {busy ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}
               {!busy && <ArrowRight className="w-4 h-4" />}
             </button>
           </form>
 
-          <p className="mt-6 text-sm text-[#a3b8b0] text-center">
+          <p className="mt-6 text-sm text-[#93a4cc] text-center">
             {mode === "login" ? "Ainda não tem conta?" : "Já tem conta?"}{" "}
             <button
               data-testid="toggle-auth-mode"
               onClick={() => setMode(mode === "login" ? "signup" : "login")}
-              className="text-[#e78662] font-semibold hover:underline"
+              className="text-[#19a9ff] font-semibold hover:underline"
             >
               {mode === "login" ? "Cadastre-se" : "Entrar"}
             </button>
@@ -137,7 +137,7 @@ export default function AuthPage() {
 function Field({ icon: Icon, type = "text", placeholder, value, onChange, testid }) {
   return (
     <div className="relative">
-      <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a3b8b0]" />
+      <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#93a4cc]" />
       <input
         data-testid={testid}
         type={type}
@@ -145,7 +145,7 @@ function Field({ icon: Icon, type = "text", placeholder, value, onChange, testid
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required
-        className="w-full h-11 pl-11 pr-4 rounded-xl bg-[#121e1a] border border-[#e78662]/15 text-cream placeholder:text-[#64748b] focus-visible:ring-2 focus-visible:ring-[#e78662] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0c1411] outline-none transition-all"
+        className="w-full h-11 pl-11 pr-4 rounded-xl bg-[#101a38] border border-[#19a9ff]/15 text-cream placeholder:text-[#64748b] focus-visible:ring-2 focus-visible:ring-[#19a9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a1228] outline-none transition-all"
       />
     </div>
   );

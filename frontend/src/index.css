@@ -34,12 +34,12 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
-  --color-cream: #f7f3ed;
-  --color-forest: #14231e;
-  --color-coral: #e78662;
-  --color-canvas: #0c1411;
-  --color-surface: #121e1a;
-  --color-surface2: #1a2a25;
+  --color-cream: #eaf2ff;
+  --color-forest: #0a1228;
+  --color-coral: #19a9ff;
+  --color-canvas: #0a1228;
+  --color-surface: #101a38;
+  --color-surface2: #17264b;
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
@@ -91,23 +91,23 @@
   }
   h1, h2, h3, h4 { font-family: var(--font-heading); }
   code { font-family: var(--font-mono); }
-  ::selection { background: #e78662; color: #14231e; }
+  ::selection { background: #19a9ff; color: #0a1228; }
   button:not(:disabled), [role='button']:not(:disabled) { cursor: pointer; }
 
   ::-webkit-scrollbar { width: 9px; height: 9px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #1a2a25; border-radius: 9px; }
-  ::-webkit-scrollbar-thumb:hover { background: #26413a; }
+  ::-webkit-scrollbar-thumb { background: #17264b; border-radius: 9px; }
+  ::-webkit-scrollbar-thumb:hover { background: #22407a; }
 }
 
 @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
-@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(231,134,98,0.45); } 70% { box-shadow: 0 0 0 10px rgba(231,134,98,0); } 100% { box-shadow: 0 0 0 0 rgba(231,134,98,0); } }
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(25,169,255,0.45); } 70% { box-shadow: 0 0 0 10px rgba(25,169,255,0); } 100% { box-shadow: 0 0 0 0 rgba(25,169,255,0); } }
 @keyframes grid-pan { from { background-position: 0 0; } to { background-position: 48px 48px; } }
 
 .animate-floaty { animation: floaty 6s ease-in-out infinite; }
 .grid-bg {
-  background-image: linear-gradient(rgba(231,134,98,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(231,134,98,0.06) 1px, transparent 1px);
+  background-image: linear-gradient(rgba(25,169,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(25,169,255,0.06) 1px, transparent 1px);
   background-size: 48px 48px;
 }
-.glow-coral { box-shadow: 0 0 40px rgba(231,134,98,0.22); }
+.glow-coral { box-shadow: 0 0 40px rgba(25,169,255,0.22); }
 .online-ping { animation: pulse-ring 2.2s infinite; }
