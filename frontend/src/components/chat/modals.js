@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Plus, LogIn } from "lucide-react";
+import { X, Plus, LogIn, Hash, Volume2 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { Avatar } from "./Avatar";
@@ -85,11 +85,12 @@ export function CreateServerModal({ onClose, onCreated }) {
 
 export function CreateChannelModal({ onClose, onCreated, serverId }) {
   const [name, setName] = useState("");
+  const [type, setType] = useState("text");
   const [busy, setBusy] = useState(false);
   const create = async () => {
     if (!name.trim()) return;
     setBusy(true);
-    try { const res = await api.post(`/servers/${serverId}/channels`, { name: name.trim().toLowerCase().replace(/\s+/g, "-") }); onCreated(res.data); toast.success("Canal criado!"); onClose(); }
+    try { const res = await api.post(`/servers/${serverId}/channels`, { name: name.trim().toLowerCase().replace(/\s+/g, "-"), type }); onCreated(res.data); toast.success("Canal criado!"); onClose(); }
     catch { toast.error("Erro ao criar canal"); } finally { setBusy(false); }
   };
   return (
@@ -98,8 +99,16 @@ export function CreateChannelModal({ onClose, onCreated, serverId }) {
         <h3 className="font-heading font-bold text-xl">Novo canal</h3>
         <button onClick={onClose} className="text-[#a3b8b0] hover:text-cream"><X className="w-5 h-5" /></button>
       </div>
+      <div className="flex gap-2 mb-5">
+        <button data-testid="channel-type-text" onClick={() => setType("text")} className={`flex-1 h-16 rounded-xl border flex flex-col items-center justify-center gap-1 transition-colors ${type === "text" ? "bg-[#e78662]/15 border-[#e78662]/60 text-cream" : "bg-[#0c1411] border-[#e78662]/15 text-[#a3b8b0]"}`}>
+          <Hash className="w-5 h-5" /><span className="text-xs font-semibold">Texto</span>
+        </button>
+        <button data-testid="channel-type-voice" onClick={() => setType("voice")} className={`flex-1 h-16 rounded-xl border flex flex-col items-center justify-center gap-1 transition-colors ${type === "voice" ? "bg-[#22c55e]/15 border-[#22c55e]/60 text-cream" : "bg-[#0c1411] border-[#e78662]/15 text-[#a3b8b0]"}`}>
+          <Volume2 className="w-5 h-5" /><span className="text-xs font-semibold">Voz</span>
+        </button>
+      </div>
       <label className="text-xs font-semibold tracking-wider uppercase text-[#a3b8b0]">Nome do canal</label>
-      <input data-testid="channel-name-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: anúncios"
+      <input data-testid="channel-name-input" value={name} onChange={(e) => setName(e.target.value)} placeholder={type === "voice" ? "ex: bate-papo" : "ex: anúncios"}
         className="w-full mt-2 h-11 px-4 rounded-xl bg-[#0c1411] border border-[#e78662]/15 text-cream outline-none focus:border-[#e78662]/50" />
       <button data-testid="confirm-create-channel" onClick={create} disabled={busy} className="w-full mt-5 h-11 rounded-xl bg-[#e78662] text-[#0c1411] font-semibold disabled:opacity-60 hover:-translate-y-0.5 transition-transform">
         {busy ? "Criando..." : "Criar canal"}

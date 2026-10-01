@@ -1,4 +1,4 @@
-import { Hash, Plus, LogOut, Settings, ChevronDown, Copy } from "lucide-react";
+import { Hash, Plus, LogOut, Settings, ChevronDown, Copy, Volume2, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, PresenceDot } from "./Avatar";
 import { useAuth } from "@/context/AuthContext";
@@ -7,8 +7,30 @@ export default function ChannelSidebar({ server, channels, activeChannel, onSele
   const { user, logout } = useAuth();
 
   const copyInvite = () => {
-    navigator.clipboard.writeText(server.invite_code);
-    toast.success("Código de convite copiado!");
+    const link = `${window.location.origin}/invite/${server.invite_code}`;
+    navigator.clipboard.writeText(link);
+    toast.success("Link de convite copiado!");
+  };
+
+  const textChannels = channels.filter((c) => c.type !== "voice");
+  const voiceChannels = channels.filter((c) => c.type === "voice");
+
+  const renderChannel = (c) => {
+    const active = activeChannel?.channel_id === c.channel_id;
+    const Icon = c.type === "voice" ? Volume2 : Hash;
+    return (
+      <button
+        key={c.channel_id}
+        data-testid={`channel-item-${c.name}`}
+        onClick={() => onSelectChannel(c)}
+        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-colors ${
+          active ? "bg-[#1a2a25] text-cream" : "text-[#a3b8b0] hover:bg-[#121e1a] hover:text-cream"
+        }`}
+      >
+        <Icon className="w-4 h-4 shrink-0 opacity-70" />
+        <span className="truncate">{c.name}</span>
+      </button>
+    );
   };
 
   return (
@@ -27,22 +49,20 @@ export default function ChannelSidebar({ server, channels, activeChannel, onSele
             <Plus className="w-4 h-4" />
           </button>
         </div>
-        {channels.map((c) => {
-          const active = activeChannel?.channel_id === c.channel_id;
-          return (
-            <button
-              key={c.channel_id}
-              data-testid={`channel-item-${c.name}`}
-              onClick={() => onSelectChannel(c)}
-              className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-colors ${
-                active ? "bg-[#1a2a25] text-cream" : "text-[#a3b8b0] hover:bg-[#121e1a] hover:text-cream"
-              }`}
-            >
-              <Hash className="w-4 h-4 shrink-0 opacity-70" />
-              <span className="truncate">{c.name}</span>
-            </button>
-          );
-        })}
+        {textChannels.map(renderChannel)}
+
+        {voiceChannels.length > 0 && (
+          <>
+            <div className="flex items-center justify-between px-2 mb-1 mt-4">
+              <span className="text-xs font-semibold tracking-wider uppercase text-[#a3b8b0]">Canais de voz</span>
+            </div>
+            {voiceChannels.map(renderChannel)}
+          </>
+        )}
+
+        <button data-testid="copy-invite-link-button" onClick={copyInvite} className="w-full flex items-center gap-2 px-2 py-2 mt-4 rounded-lg text-sm text-[#e78662] hover:bg-[#121e1a] transition-colors">
+          <Link2 className="w-4 h-4" /> Copiar link de convite
+        </button>
       </div>
 
       <UserFooter user={user} logout={logout} onProfile={onProfile} />

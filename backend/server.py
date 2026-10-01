@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, UploadFile, File, Header, Query
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -8,9 +8,10 @@ import secrets
 import uuid
 import bcrypt
 import httpx
+import requests
 from pathlib import Path
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 
 ROOT_DIR = Path(__file__).parent
@@ -19,6 +20,59 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+
+# ----------------------------- Object Storage -----------------------------
+STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
+STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
+EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
+APP_NAME = "linkchat"
+storage_key = None
+
+MIME_TYPES = {
+    "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "gif": "image/gif",
+    "webp": "image/webp", "svg": "image/svg+xml", "pdf": "application/pdf",
+    "json": "application/json", "csv": "text/csv", "txt": "text/plain", "zip": "application/zip",
+    "mp4": "video/mp4", "mp3": "audio/mpeg", "doc": "application/msword",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+}
+
+
+def init_storage(force: bool = False):
+    global storage_key
+    if storage_key and not force:
+        return storage_key
+    resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
+    resp.raise_for_status()
+    storage_key = resp.json()["storage_key"]
+    return storage_key
+
+
+def put_object(path: str, data: bytes, content_type: str) -> dict:
+    key = init_storage()
+    resp = requests.put(
+        f"{STORAGE_URL}/objects/{path}",
+        headers={"X-Storage-Key": key, "Content-Type": content_type},
+        data=data, timeout=120,
+    )
+    if resp.status_code == 404:
+        key = init_storage(force=True)
+        resp = requests.put(
+            f"{STORAGE_URL}/objects/{path}",
+            headers={"X-Storage-Key": key, "Content-Type": content_type},
+            data=data, timeout=120,
+        )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_object(path: str):
+    key = init_storage()
+    resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
+    if resp.status_code == 404:
+        key = init_storage(force=True)
+        resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -52,7 +106,17 @@ class ChannelCreate(BaseModel):
 class MessageCreate(BaseModel):
     content: str = ""
     image: Optional[str] = None
+    file_url: Optional[str] = None
     file_name: Optional[str] = None
+    file_type: Optional[str] = None
+
+
+class ReactInput(BaseModel):
+    emoji: str
+
+
+class TypingInput(BaseModel):
+    room: str
 
 
 class JoinInput(BaseModel):
@@ -337,15 +401,18 @@ async def post_message(channel_id: str, data: MessageCreate, user=Depends(get_cu
     if not ch:
         raise HTTPException(status_code=404, detail="Canal não encontrado")
     await ensure_member(ch["server_id"], user)
-    if not data.content and not data.image:
+    if not data.content and not data.image and not data.file_url:
         raise HTTPException(status_code=400, detail="Mensagem vazia")
     doc = {
         "message_id": new_id("msg"), "channel_id": channel_id,
         "author_id": user["user_id"], "content": data.content,
-        "image": data.image, "file_name": data.file_name,
+        "image": data.image, "file_url": data.file_url,
+        "file_name": data.file_name, "file_type": data.file_type,
+        "reactions": {},
         "created_at": now_utc().isoformat(),
     }
     await db.messages.insert_one(doc)
+    await db.typing.delete_one({"room": channel_id, "user_id": user["user_id"]})
     doc.pop("_id", None)
     doc["author"] = public_user(user)
     return doc
@@ -396,13 +463,184 @@ async def post_dm(other_id: str, data: MessageCreate, user=Depends(get_current_u
     )
     doc = {
         "message_id": new_id("dm"), "dm_key": key, "author_id": user["user_id"],
-        "content": data.content, "image": data.image, "file_name": data.file_name,
+        "content": data.content, "image": data.image, "file_url": data.file_url,
+        "file_name": data.file_name, "file_type": data.file_type, "reactions": {},
         "created_at": now_utc().isoformat(),
     }
     await db.dm_messages.insert_one(doc)
+    await db.typing.delete_one({"room": key, "user_id": user["user_id"]})
     doc.pop("_id", None)
     doc["author"] = public_user(user)
     return doc
+
+
+@api_router.post("/upload")
+async def upload_file(file: UploadFile = File(...), user=Depends(get_current_user)):
+    ext = (file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "bin")
+    path = f"{APP_NAME}/uploads/{user['user_id']}/{uuid.uuid4().hex}.{ext}"
+    data = await file.read()
+    if len(data) > 15 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Arquivo muito grande (máx 15MB)")
+    content_type = file.content_type or MIME_TYPES.get(ext, "application/octet-stream")
+    result = put_object(path, data, content_type)
+    stored_path = result["path"]
+    await db.files.insert_one({
+        "id": uuid.uuid4().hex,
+        "storage_path": stored_path,
+        "original_filename": file.filename,
+        "content_type": content_type,
+        "size": result.get("size", len(data)),
+        "owner_id": user["user_id"],
+        "is_deleted": False,
+        "created_at": now_utc().isoformat(),
+    })
+    is_image = content_type.startswith("image/")
+    return {
+        "url": f"/api/files/{stored_path}",
+        "file_name": file.filename,
+        "file_type": content_type,
+        "is_image": is_image,
+    }
+
+
+@api_router.get("/files/{path:path}")
+async def download_file(path: str):
+    record = await db.files.find_one({"storage_path": path, "is_deleted": False}, {"_id": 0})
+    if not record:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+    data, content_type = get_object(path)
+    return Response(content=data, media_type=record.get("content_type", content_type))
+
+
+# ----------------------------- Typing indicator -----------------------------
+@api_router.post("/typing")
+async def set_typing(data: TypingInput, user=Depends(get_current_user)):
+    await db.typing.update_one(
+        {"room": data.room, "user_id": user["user_id"]},
+        {"$set": {"room": data.room, "user_id": user["user_id"], "name": user["name"],
+                  "at": now_utc().isoformat()}},
+        upsert=True,
+    )
+    return {"ok": True}
+
+
+@api_router.get("/typing/{room}")
+async def get_typing(room: str, user=Depends(get_current_user)):
+    cutoff = now_utc() - timedelta(seconds=6)
+    rows = await db.typing.find({"room": room}, {"_id": 0}).to_list(50)
+    out = []
+    for r in rows:
+        at = r.get("at")
+        if isinstance(at, str):
+            at = datetime.fromisoformat(at)
+        if at and at.tzinfo is None:
+            at = at.replace(tzinfo=timezone.utc)
+        if at and at > cutoff and r["user_id"] != user["user_id"]:
+            out.append({"user_id": r["user_id"], "name": r["name"]})
+    return out
+
+
+# ----------------------------- Reactions -----------------------------
+async def _toggle_reaction(collection, message_id, emoji, user_id):
+    doc = await collection.find_one({"message_id": message_id}, {"_id": 0})
+    if not doc:
+        return None
+    reactions = doc.get("reactions") or {}
+    users = reactions.get(emoji, [])
+    if user_id in users:
+        users.remove(user_id)
+    else:
+        users.append(user_id)
+    if users:
+        reactions[emoji] = users
+    else:
+        reactions.pop(emoji, None)
+    await collection.update_one({"message_id": message_id}, {"$set": {"reactions": reactions}})
+    return reactions
+
+
+@api_router.post("/messages/{message_id}/react")
+async def react_message(message_id: str, data: ReactInput, user=Depends(get_current_user)):
+    reactions = await _toggle_reaction(db.messages, message_id, data.emoji, user["user_id"])
+    if reactions is None:
+        reactions = await _toggle_reaction(db.dm_messages, message_id, data.emoji, user["user_id"])
+    if reactions is None:
+        raise HTTPException(status_code=404, detail="Mensagem não encontrada")
+    return {"reactions": reactions}
+
+
+# ----------------------------- Voice channels (WebRTC mesh) -----------------------------
+VOICE_WINDOW = 12  # seconds
+
+
+@api_router.post("/channels/{channel_id}/voice/join")
+async def voice_join(channel_id: str, user=Depends(get_current_user)):
+    ch = await db.channels.find_one({"channel_id": channel_id}, {"_id": 0})
+    if not ch:
+        raise HTTPException(status_code=404, detail="Canal não encontrado")
+    await ensure_member(ch["server_id"], user)
+    await db.voice_members.update_one(
+        {"channel_id": channel_id, "user_id": user["user_id"]},
+        {"$set": {"channel_id": channel_id, "user_id": user["user_id"], "name": user["name"],
+                  "picture": user.get("picture"), "at": now_utc().isoformat()}},
+        upsert=True,
+    )
+    return await _voice_participants(channel_id)
+
+
+@api_router.post("/channels/{channel_id}/voice/leave")
+async def voice_leave(channel_id: str, user=Depends(get_current_user)):
+    await db.voice_members.delete_one({"channel_id": channel_id, "user_id": user["user_id"]})
+    await db.voice_signals.delete_many({"channel_id": channel_id,
+                                        "$or": [{"from": user["user_id"]}, {"to": user["user_id"]}]})
+    return {"ok": True}
+
+
+async def _voice_participants(channel_id):
+    cutoff = now_utc() - timedelta(seconds=VOICE_WINDOW)
+    rows = await db.voice_members.find({"channel_id": channel_id}, {"_id": 0}).to_list(100)
+    out = []
+    for r in rows:
+        at = r.get("at")
+        if isinstance(at, str):
+            at = datetime.fromisoformat(at)
+        if at and at.tzinfo is None:
+            at = at.replace(tzinfo=timezone.utc)
+        if at and at > cutoff:
+            out.append({"user_id": r["user_id"], "name": r["name"], "picture": r.get("picture")})
+    return out
+
+
+@api_router.get("/channels/{channel_id}/voice/participants")
+async def voice_participants(channel_id: str, user=Depends(get_current_user)):
+    return await _voice_participants(channel_id)
+
+
+class SignalInput(BaseModel):
+    channel_id: str
+    to: str
+    type: str
+    payload: dict
+
+
+@api_router.post("/voice/signal")
+async def voice_signal(data: SignalInput, user=Depends(get_current_user)):
+    await db.voice_signals.insert_one({
+        "id": uuid.uuid4().hex, "channel_id": data.channel_id,
+        "from": user["user_id"], "to": data.to, "type": data.type,
+        "payload": data.payload, "created_at": now_utc().isoformat(),
+    })
+    return {"ok": True}
+
+
+@api_router.get("/voice/signals")
+async def get_voice_signals(channel_id: str, user=Depends(get_current_user)):
+    rows = await db.voice_signals.find({"channel_id": channel_id, "to": user["user_id"]}, {"_id": 0}).to_list(200)
+    if rows:
+        ids = [r["id"] for r in rows]
+        await db.voice_signals.delete_many({"id": {"$in": ids}})
+    rows.sort(key=lambda r: r["created_at"])
+    return rows
 
 
 @api_router.get("/")
@@ -422,6 +660,15 @@ app.add_middleware(
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+@app.on_event("startup")
+async def startup_storage():
+    try:
+        init_storage()
+        logger.info("Storage initialized")
+    except Exception as e:
+        logger.error(f"Storage init failed: {e}")
 
 
 @app.on_event("shutdown")

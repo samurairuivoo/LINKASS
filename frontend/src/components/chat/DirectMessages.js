@@ -36,6 +36,13 @@ export default function DirectMessages({ onProfile }) {
     setMessages((m) => [...m, res.data]);
   };
 
+  const reactDM = async (messageId, emoji) => {
+    const res = await api.post(`/messages/${messageId}/react`, { emoji });
+    setMessages((m) => m.map((x) => (x.message_id === messageId ? { ...x, reactions: res.data.reactions } : x)));
+  };
+
+  const dmRoom = active ? [user.user_id, active.user_id].sort().join("_") : null;
+
   const filtered = people.filter((p) => p.name.toLowerCase().includes(q.toLowerCase()));
 
   return (
@@ -81,6 +88,8 @@ export default function DirectMessages({ onProfile }) {
           subtitle={active.online ? "online" : "offline"}
           messages={messages}
           onSend={send}
+          onReact={reactDM}
+          room={dmRoom}
           placeholder={`Mensagem para ${active.name}`}
           emptyText={`Converse com ${active.name}`}
         />

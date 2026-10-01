@@ -1,44 +1,80 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Hash, Send, ImagePlus, X, Smile } from "lucide-react";
+import { Hash, Send, Paperclip, X, SmilePlus, FileText, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar } from "./Avatar";
+import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const EMOJIS = ["👍", "❤️", "😂", "🔥", "🎉", "😮", "😢", "🙏"];
+export const fileUrl = (u) => (!u ? u : u.startsWith("http") ? u : `${BACKEND_URL}${u}`);
 
 function fmtTime(iso) {
   try { return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }); }
   catch { return ""; }
 }
 
-export default function ChatArea({ title, subtitle, messages, onSend, placeholder, emptyText }) {
+export default function ChatArea({ title, subtitle, messages, onSend, onReact, room, placeholder, emptyText }) {
   const { user } = useAuth();
   const [text, setText] = useState("");
-  const [image, setImage] = useState(null);
-  const [fileName, setFileName] = useState(null);
+  const [attachment, setAttachment] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
+  const [reactFor, setReactFor] = useState(null);
   const endRef = useRef(null);
   const fileRef = useRef(null);
+  const lastTyping = useRef(0);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  const pickImage = (e) => {
+  useEffect(() => {
+    if (!room) return;
+    const load = async () => { try { const r = await api.get(`/typing/${encodeURIComponent(room)}`); setTypingUsers(r.data); } catch {} };
+    load();
+    const id = setInterval(load, 2000);
+    return () => clearInterval(id);
+  }, [room]);
+
+  const emitTyping = useCallback(() => {
+    if (!room) return;
+    const now = Date.now();
+    if (now - lastTyping.current > 2500) { lastTyping.current = now; api.post("/typing", { room }).catch(() => {}); }
+  }, [room]);
+
+  const pickFile = async (e) => {
     const f = e.target.files?.[0];
     if (!f) return;
-    if (f.size > 4 * 1024 * 1024) { toast.error("Arquivo muito grande (máx 4MB)"); return; }
-    const reader = new FileReader();
-    reader.onload = () => { setImage(reader.result); setFileName(f.name); };
-    reader.readAsDataURL(f);
+    if (f.size > 15 * 1024 * 1024) { toast.error("Arquivo muito grande (máx 15MB)"); return; }
+    setUploading(true);
+    try {
+      const fd = new FormData(); fd.append("file", f);
+      const res = await api.post("/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      setAttachment(res.data);
+    } catch { toast.error("Falha no upload"); }
+    finally { setUploading(false); if (fileRef.current) fileRef.current.value = ""; }
   };
 
   const send = async (e) => {
     e?.preventDefault();
-    if (!text.trim() && !image) return;
+    if (!text.trim() && !attachment) return;
     setSending(true);
-    const payload = { content: text.trim(), image, file_name: fileName };
-    setText(""); setImage(null); setFileName(null);
+    const payload = { content: text.trim() };
+    if (attachment) {
+      if (attachment.is_image) payload.image = attachment.url; else payload.file_url = attachment.url;
+      payload.file_name = attachment.file_name;
+      payload.file_type = attachment.file_type;
+    }
+    setText(""); setAttachment(null);
     try { await onSend(payload); }
     catch { toast.error("Falha ao enviar"); }
     finally { setSending(false); }
+  };
+
+  const react = async (messageId, emoji) => {
+    setReactFor(null);
+    try { await onReact?.(messageId, emoji); } catch {}
   };
 
   return (
@@ -68,7 +104,7 @@ export default function ChatArea({ title, subtitle, messages, onSend, placeholde
               <motion.div
                 key={m.message_id}
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-                className={`flex gap-3 ${grouped ? "mt-0.5" : "mt-4"}`}
+                className={`group flex gap-3 ${grouped ? "mt-0.5" : "mt-4"}`}
                 data-testid="message-row"
               >
                 <div className="w-9 shrink-0">
@@ -83,7 +119,36 @@ export default function ChatArea({ title, subtitle, messages, onSend, placeholde
                   )}
                   {m.content && <p className="text-[15px] text-[#d8e3df] leading-relaxed break-words whitespace-pre-wrap">{m.content}</p>}
                   {m.image && (
-                    <img src={m.image} alt={m.file_name || "imagem"} className="mt-2 max-w-xs sm:max-w-sm rounded-xl border border-[#e78662]/20" />
+                    <img src={fileUrl(m.image)} alt={m.file_name || "imagem"} className="mt-2 max-w-xs sm:max-w-sm rounded-xl border border-[#e78662]/20" />
+                  )}
+                  {m.file_url && !m.image && (
+                    <a href={fileUrl(m.file_url)} target="_blank" rel="noreferrer" data-testid="message-file" className="mt-2 inline-flex items-center gap-3 px-3 py-2.5 rounded-xl bg-[#121e1a] border border-[#e78662]/20 hover:border-[#e78662]/50 transition-colors max-w-xs">
+                      <FileText className="w-5 h-5 text-[#e78662] shrink-0" />
+                      <span className="text-sm text-cream truncate flex-1">{m.file_name || "arquivo"}</span>
+                      <Download className="w-4 h-4 text-[#a3b8b0]" />
+                    </a>
+                  )}
+                  {m.reactions && Object.keys(m.reactions).length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {Object.entries(m.reactions).map(([emoji, users]) => (
+                        <button key={emoji} data-testid={`reaction-${emoji}`} onClick={() => react(m.message_id, emoji)}
+                          className={`px-2 py-0.5 rounded-full text-sm flex items-center gap-1 border transition-colors ${users.includes(user.user_id) ? "bg-[#e78662]/20 border-[#e78662]/60" : "bg-[#121e1a] border-[#e78662]/15 hover:border-[#e78662]/40"}`}>
+                          <span>{emoji}</span><span className="text-xs text-[#a3b8b0]">{users.length}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="relative self-start opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button data-testid={`react-button-${m.message_id}`} onClick={() => setReactFor(reactFor === m.message_id ? null : m.message_id)} className="w-7 h-7 rounded-lg flex items-center justify-center text-[#a3b8b0] hover:text-[#e78662] hover:bg-[#121e1a]">
+                    <SmilePlus className="w-4 h-4" />
+                  </button>
+                  {reactFor === m.message_id && (
+                    <div className="absolute right-0 top-8 z-20 flex gap-1 p-1.5 rounded-xl bg-[#121e1a] border border-[#e78662]/25 shadow-xl">
+                      {EMOJIS.map((em) => (
+                        <button key={em} onClick={() => react(m.message_id, em)} className="w-8 h-8 rounded-lg text-lg hover:bg-[#1a2a25]">{em}</button>
+                      ))}
+                    </div>
                   )}
                 </div>
               </motion.div>
@@ -93,33 +158,43 @@ export default function ChatArea({ title, subtitle, messages, onSend, placeholde
         <div ref={endRef} />
       </div>
 
-      {image && (
+      {attachment && (
         <div className="px-5 pt-3">
-          <div className="relative inline-block">
-            <img src={image} alt="preview" className="h-24 rounded-xl border border-[#e78662]/20" />
-            <button onClick={() => { setImage(null); setFileName(null); }} className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-[#f43f5e] text-white flex items-center justify-center">
+          <div className="relative inline-flex items-center gap-2 p-2 pr-8 rounded-xl bg-[#121e1a] border border-[#e78662]/20">
+            {attachment.is_image ? (
+              <img src={fileUrl(attachment.url)} alt="preview" className="h-16 rounded-lg" />
+            ) : (
+              <><FileText className="w-5 h-5 text-[#e78662]" /><span className="text-sm text-cream max-w-[200px] truncate">{attachment.file_name}</span></>
+            )}
+            <button onClick={() => setAttachment(null)} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-[#f43f5e] text-white flex items-center justify-center">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       )}
 
-      <form onSubmit={send} className="p-4">
+      <div className="px-6 h-5 text-xs text-[#e78662]" data-testid="typing-indicator">
+        {typingUsers.length > 0 && (
+          <span>{typingUsers.map((t) => t.name).join(", ")} {typingUsers.length === 1 ? "está digitando" : "estão digitando"}...</span>
+        )}
+      </div>
+
+      <form onSubmit={send} className="px-4 pb-4 pt-1">
         <div className="flex items-end gap-2 bg-[#121e1a] border border-[#e78662]/15 rounded-2xl px-3 py-2 focus-within:border-[#e78662]/50 transition-colors">
-          <button type="button" data-testid="attach-image-button" onClick={() => fileRef.current?.click()} className="w-9 h-9 rounded-xl flex items-center justify-center text-[#a3b8b0] hover:text-[#e78662] hover:bg-[#1a2a25] transition-colors">
-            <ImagePlus className="w-5 h-5" />
+          <button type="button" data-testid="attach-image-button" disabled={uploading} onClick={() => fileRef.current?.click()} className="w-9 h-9 rounded-xl flex items-center justify-center text-[#a3b8b0] hover:text-[#e78662] hover:bg-[#1a2a25] transition-colors disabled:opacity-50">
+            {uploading ? <span className="w-4 h-4 rounded-full border-2 border-[#e78662] border-t-transparent animate-spin" /> : <Paperclip className="w-5 h-5" />}
           </button>
-          <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickImage} data-testid="file-input" />
+          <input ref={fileRef} type="file" hidden onChange={pickFile} data-testid="file-input" />
           <textarea
             data-testid="message-input"
             rows={1}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => { setText(e.target.value); emitTyping(); }}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
             placeholder={placeholder || "Mensagem..."}
             className="flex-1 bg-transparent resize-none outline-none text-cream placeholder:text-[#64748b] py-1.5 max-h-32"
           />
-          <button type="submit" data-testid="send-message-button" disabled={sending || (!text.trim() && !image)} className="w-9 h-9 rounded-xl bg-[#e78662] text-[#0c1411] flex items-center justify-center disabled:opacity-40 hover:-translate-y-0.5 active:scale-95 transition-transform">
+          <button type="submit" data-testid="send-message-button" disabled={sending || uploading || (!text.trim() && !attachment)} className="w-9 h-9 rounded-xl bg-[#e78662] text-[#0c1411] flex items-center justify-center disabled:opacity-40 hover:-translate-y-0.5 active:scale-95 transition-transform">
             <Send className="w-4 h-4" />
           </button>
         </div>

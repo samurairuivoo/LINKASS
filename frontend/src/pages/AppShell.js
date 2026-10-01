@@ -6,6 +6,7 @@ import ChannelSidebar from "@/components/chat/ChannelSidebar";
 import ChatArea from "@/components/chat/ChatArea";
 import MemberList from "@/components/chat/MemberList";
 import DirectMessages from "@/components/chat/DirectMessages";
+import VoiceRoom from "@/components/chat/VoiceRoom";
 import { CreateServerModal, CreateChannelModal, ProfileModal } from "@/components/chat/modals";
 
 export default function AppShell() {
@@ -23,7 +24,23 @@ export default function AppShell() {
     try { const res = await api.get("/servers"); setServers(res.data); return res.data; } catch { return []; }
   }, []);
 
-  useEffect(() => { loadServers(); }, [loadServers]);
+  useEffect(() => {
+    (async () => {
+      const list = await loadServers();
+      const pending = localStorage.getItem("lc_pending_invite");
+      if (pending) {
+        localStorage.removeItem("lc_pending_invite");
+        try { const res = await api.post("/servers/join", { invite_code: pending }); const l2 = await loadServers(); openServer(res.data); return; } catch {}
+      }
+      const openId = localStorage.getItem("lc_open_server");
+      if (openId) {
+        localStorage.removeItem("lc_open_server");
+        const srv = list.find((s) => s.server_id === openId);
+        if (srv) openServer(srv);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadServers]);
 
   const openServer = useCallback(async (server) => {
     setView("server");
@@ -53,7 +70,7 @@ export default function AppShell() {
   }, []);
 
   useEffect(() => {
-    if (view !== "server" || !activeChannel) { return; }
+    if (view !== "server" || !activeChannel || activeChannel.type === "voice") { return; }
     loadMessages(activeChannel);
     const id = setInterval(() => loadMessages(activeChannel), 2500);
     return () => clearInterval(id);
@@ -62,6 +79,11 @@ export default function AppShell() {
   const sendChannel = async (payload) => {
     const res = await api.post(`/channels/${activeChannel.channel_id}/messages`, payload);
     setMessages((m) => [...m, res.data]);
+  };
+
+  const reactMessage = async (messageId, emoji) => {
+    const res = await api.post(`/messages/${messageId}/react`, { emoji });
+    setMessages((m) => m.map((x) => (x.message_id === messageId ? { ...x, reactions: res.data.reactions } : x)));
   };
 
   const onServerCreated = async (srv) => {
@@ -92,13 +114,19 @@ export default function AppShell() {
             onCreateChannel={() => setModal("create-channel")}
             onProfile={() => setModal("profile")}
           />
-          <ChatArea
-            title={activeChannel ? `#${activeChannel.name}` : "Canal"}
-            messages={messages}
-            onSend={sendChannel}
-            placeholder={activeChannel ? `Mensagem em #${activeChannel.name}` : "Mensagem"}
-            emptyText={activeChannel ? `Bem-vindo a #${activeChannel.name}` : "Selecione um canal"}
-          />
+          {activeChannel?.type === "voice" ? (
+            <VoiceRoom channel={activeChannel} user={user} />
+          ) : (
+            <ChatArea
+              title={activeChannel ? `#${activeChannel.name}` : "Canal"}
+              room={activeChannel?.channel_id}
+              messages={messages}
+              onSend={sendChannel}
+              onReact={reactMessage}
+              placeholder={activeChannel ? `Mensagem em #${activeChannel.name}` : "Mensagem"}
+              emptyText={activeChannel ? `Bem-vindo a #${activeChannel.name}` : "Selecione um canal"}
+            />
+          )}
           <MemberList members={members} />
         </>
       ) : null}

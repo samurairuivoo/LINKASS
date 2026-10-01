@@ -7,6 +7,7 @@ import api, { setToken } from "@/lib/api";
 import LandingPage from "@/pages/LandingPage";
 import AuthPage from "@/pages/AuthPage";
 import AppShell from "@/pages/AppShell";
+import InvitePage from "@/pages/InvitePage";
 
 // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
 function AuthCallback() {
@@ -59,6 +60,7 @@ function AppRouter() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/auth" element={<AuthPage />} />
       <Route path="/app" element={<Protected><AppShell /></Protected>} />
+      <Route path="/invite/:code" element={<InvitePage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
